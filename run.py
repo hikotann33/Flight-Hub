@@ -4,8 +4,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-__version__ = "1.0.0"
-DISPLAY_VERSION = "v1"
+__version__ = "2.0.0"
+DISPLAY_VERSION = "v2"
 
 
 def _banner():

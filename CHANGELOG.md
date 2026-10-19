@@ -8,6 +8,26 @@
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-19
+
+### 追加
+
+- `/dashboard` — 予定フライト、参加人数、設定状況を1枚のカードに集約。
+- `/export` — フライトログをCSV（Excel用BOM付き）またはJSONで書き出し。
+- `/search` — 便名・ルート・機材でフライトを検索（予定／過去／全件）。
+- `/poll` — ボタン式の投票。票数と割合をリアルタイムで更新し、作成者・マネージャーが締め切れる。
+- `/onduty` — 勤務中ロールの付与／解除（`roles.on_duty` を設定で指定）。
+- `/news` / `/news_list` — お知らせの予約投稿（時刻指定・一覧・取消）。
+- `/help` に新カテゴリ「Dashboard, Data & Polls」を追加。
+
+### 保存
+
+- 投票結果と予約投稿は `misc_data.json` のバックアップに追加され、再起動後も保持されます。
+
+### 変更
+
+- バージョン表記を `2.0.0`（`v2`）に更新。
+
 ## [1.0.0] - 2026-01-01
 
 Flight Hub の最初のオープンソースリリースです。
@@ -38,5 +58,6 @@ Flight Hub の最初のオープンソースリリースです。
   `roblox_link` は維持しています。
 - 企業固有のシークレット、サーバー ID、絵文字 ID。
 
-[Unreleased]: https://github.com/your-org/flight-hub/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/your-org/flight-hub/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/your-org/flight-hub/releases/tag/v2.0.0
 [1.0.0]: https://github.com/your-org/flight-hub/releases/tag/v1.0.0

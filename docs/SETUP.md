@@ -121,7 +121,8 @@ python run.py
 - `guilds` — `staff`, `customer`, `log`
 - `channels` — すべてのチャンネル／カテゴリ ID
 - `roles` — すべてのロール ID（イベントマネージャー、チーフ、警告ロール、
-  部門ロール、認定、Bot ロールなど）
+  部門ロール、認定、Bot ロールなど）。`on_duty` のみ自動検出の対象外で、
+  `/onduty` を使う場合はロール ID を直接設定してください。
 - `colors` — 埋め込みの色（`primary`, `private`, `success`, `warning`,
   `danger`, `info`）
 - `emojis` — カスタム絵文字の文字列（例: `<:name:id>`）と

@@ -4,12 +4,12 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 
-**v1** · オープンソース · [MIT ライセンス](LICENSE)
+**v2** · オープンソース · [MIT ライセンス](LICENSE)
 
 `discord.py` で作られた、Discord 向けのオープンソースなフライト運用ボットです。
 どなたでも自分の Discord サーバーで運用できるようにクリーンアップしたリリースです。
 
-> これは **オープンソース版（v1）** です。企業固有のシークレット、サーバー ID、
+> これは **オープンソース版（v2）** です。企業固有のシークレット、サーバー ID、
 > Miles／Roblox のアカウント連携システムは削除されています。それ以外の機能
 > （フライトイベント作成、ブリーフィング、フライトログ、アンケート、スタッフ評価、
 > 休暇（LOA）管理、統計・ランキングなど）はそのまま利用できます。

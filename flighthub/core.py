@@ -31,8 +31,8 @@ import matplotlib
 matplotlib.use("Agg")  
 import matplotlib.pyplot as plt
 
-__version__ = "1.0.0"
-DISPLAY_VERSION = "v1"
+__version__ = "2.0.0"
+DISPLAY_VERSION = "v2"
 
 
 
@@ -701,6 +701,8 @@ MISC_DATA_CHANNEL_ID = cfg("channels.misc_data")
 STAFF_NOTES_CACHE = {}
 ANNOUNCE_TEMPLATES_CACHE = {}
 SWAP_BOARD_CACHE = []
+POLL_CACHE = {}
+NEWS_CACHE = []
 UNDO_STACK = []
 
 
@@ -1227,16 +1229,19 @@ def is_exempt_from_flight_reminder(member: discord.Member, jst_now: datetime.dat
 
 
 async def load_misc_data():
-    global STAFF_NOTES_CACHE, ANNOUNCE_TEMPLATES_CACHE, SWAP_BOARD_CACHE, LAST_CUSTOMER_MENTION_TS
+    global STAFF_NOTES_CACHE, ANNOUNCE_TEMPLATES_CACHE, SWAP_BOARD_CACHE, POLL_CACHE, NEWS_CACHE, LAST_CUSTOMER_MENTION_TS
     found, data = await read_latest_json_backup(MISC_DATA_CHANNEL_ID, filename="misc_data.json", limit=100)
     if not found:
         STAFF_NOTES_CACHE, ANNOUNCE_TEMPLATES_CACHE, SWAP_BOARD_CACHE = {}, {}, []
+        POLL_CACHE, NEWS_CACHE = {}, []
         return
     if not isinstance(data, dict):
         raise LoadError("misc_data backup has an unexpected format (expected a dict)")
     STAFF_NOTES_CACHE = data.get("staff_notes", {})
     ANNOUNCE_TEMPLATES_CACHE = data.get("announce_templates", {})
     SWAP_BOARD_CACHE = data.get("swap_board", [])
+    POLL_CACHE = data.get("polls") if isinstance(data.get("polls"), dict) else {}
+    NEWS_CACHE = data.get("news") if isinstance(data.get("news"), list) else []
     LAST_CUSTOMER_MENTION_TS = max(LAST_CUSTOMER_MENTION_TS, float(data.get("last_customer_mention_ts", 0) or 0))
     print(f"Misc Data Loaded: notes={len(STAFF_NOTES_CACHE)}, templates={len(ANNOUNCE_TEMPLATES_CACHE)}, swaps={len(SWAP_BOARD_CACHE)}")
 
@@ -1248,6 +1253,10 @@ async def save_misc_data():
         payload["announce_templates"] = ANNOUNCE_TEMPLATES_CACHE
     if SWAP_BOARD_CACHE:
         payload["swap_board"] = SWAP_BOARD_CACHE
+    if POLL_CACHE:
+        payload["polls"] = POLL_CACHE
+    if NEWS_CACHE:
+        payload["news"] = NEWS_CACHE
     return await save_json_to_channel(MISC_DATA_CHANNEL_ID, payload, "misc_data.json")
 
 async def cleanup_obsolete_saved_data() -> dict:
@@ -5957,6 +5966,23 @@ HELP_DATA = {
             "params": [],
             "note": "Test mode never sends customer announcements, creates events, syncs to external services, or touches the production log/survey. Survey DMs go only to the person running the test."
         }
+    },
+    "v2_tools_group": {
+        "name": "Dashboard / Data / Polls",
+        "ja": {
+            "title": "Dashboard & Data Commands",
+            "desc": "Overview, data export, search, polls, the on-duty role and scheduled announcements.",
+            "usage": "`/dashboard` — Overview of flights, signups and configuration\n`/export` — [Manager] Export the flight log as CSV or JSON\n`/search` — Search flights by code, route or aircraft\n`/poll` — Create a poll with buttons and live results\n`/onduty` — Toggle the on-duty role for yourself\n`/news` — [Manager] Schedule an announcement for later\n`/news_list` — [Manager] List or cancel scheduled announcements",
+            "params": [],
+            "note": "Poll votes and scheduled announcements are written to the misc data backup so they survive a restart."
+        },
+        "en": {
+            "title": "Dashboard, Data & Polls",
+            "desc": "Overview, data export, search, polls, the on-duty role and scheduled announcements.",
+            "usage": "`/dashboard` — Overview of flights, signups and configuration\n`/export` — [Manager] Export the flight log as CSV or JSON\n`/search` — Search flights by code, route or aircraft\n`/poll` — Create a poll with buttons and live results\n`/onduty` — Toggle the on-duty role for yourself\n`/news` — [Manager] Schedule an announcement for later\n`/news_list` — [Manager] List or cancel scheduled announcements",
+            "params": [],
+            "note": "Poll votes and scheduled announcements are written to the misc data backup so they survive a restart."
+        }
     }
 }
 
@@ -5965,7 +5991,7 @@ _HELP_CMD_TOKEN_RE = re.compile(r"`(/(?:[^`]+?))`")
 
 
 class HelpView(discord.ui.LayoutView):
-    def __init__(self, lang: str = "en", command_key: str = None, member=None):
+    def __init__(self, command_key: str = None, member=None):
         super().__init__(timeout=300)
         self.lang = "en"
         self.command_key = command_key if command_key in HELP_DATA else None
@@ -10141,6 +10167,7 @@ from . import test_flight
 from . import ui_flights
 from . import setup_wizard
 from . import admin_tools
+from . import v2_features
 if __name__ == "__main__":
     start()
 

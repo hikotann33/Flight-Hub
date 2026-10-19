@@ -720,6 +720,11 @@ async def on_ready():
         C.process_evaluations_task.start()
     if not C.recurring_spawner_task.is_running():
         C.recurring_spawner_task.start()
+    try:
+        from . import v2_features as _v2
+        _v2.register(C.client)
+    except Exception as e:
+        print(f"v2 startup failed: {e}")
 
     try:
         status_emoji = discord.PartialEmoji.from_str(C.EMOJI_LINK_STR)
