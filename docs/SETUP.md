@@ -126,7 +126,10 @@ python run.py
 - `colors` — 埋め込みの色（`primary`, `private`, `success`, `warning`,
   `danger`, `info`）
 - `emojis` — カスタム絵文字の文字列（例: `<:name:id>`）と
-  `flight_approved`（カスタム絵文字 ID）
+  `flight_approved`（カスタム絵文字 ID）。
+  `emojis.signup_type` は募集メッセージ（社員向け告知）の見出しアイコンで、
+  **既定は Unicode 絵文字**（✈️ 🚌 🧪 🔁 🔒 🎮）。カスタム絵文字が使える環境なら
+  `<:name:id>` に差し替えるだけで反映されます。
 - `brand` — `name`, `footer`, `airline`
 - `options` — `timezone`（`Asia/Tokyo` などの IANA 名。スケジュールに使用）
 - `setup` — `completed`, `version`（`/setup` が管理）

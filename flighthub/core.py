@@ -201,12 +201,12 @@ BRAND_FOOTER = cfg("brand.footer", "Flight Hub")
 BRAND_AIRLINE = cfg("brand.airline", "Airline")
 
 SIGNUP_TYPE_ICON = cfg("emojis.signup_type", {
-    "flight":    "",
-    "bus":       "",
-    "test":      "",
-    "recurring": "",
-    "private":   "",
-    "gamenight": "",
+    "flight":    "\u2708\ufe0f",  # airplane
+    "bus":       "\U0001f68c",    # bus
+    "test":      "\U0001f9ea",    # test tube
+    "recurring": "\U0001f501",    # repeat
+    "private":   "\U0001f512",    # lock
+    "gamenight": "\U0001f3ae",    # video game
 })
 
 
