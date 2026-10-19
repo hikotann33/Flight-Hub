@@ -104,7 +104,7 @@ python run.py
 
 ### スタッフサーバーのロール
 
-`Event Managers`, `Ground Ops`, `Cabin Crews`, `Flight Ops`, `Bus Driver`,
+`Event Managers`, `Ground Ops`, `Cabin Crews`, `Flight Ops`,
 `Chief`, `Flight Verifier`, `LOA`, `Staff`, `Notifications`,
 `Join Notifications`, `DM Target`, `DM Staff`, `DM Exclude`,
 `Exclude Reminders`。
@@ -128,7 +128,7 @@ python run.py
 - `emojis` — カスタム絵文字の文字列（例: `<:name:id>`）と
   `flight_approved`（カスタム絵文字 ID）。
   `emojis.signup_type` は募集メッセージ（社員向け告知）の見出しアイコンで、
-  **既定は Unicode 絵文字**（✈️ 🚌 🧪 🔁 🔒 🎮）。カスタム絵文字が使える環境なら
+  **既定は Unicode 絵文字**（✈️ 🛠️ 🧪 🔁 🔒 🎮）。カスタム絵文字が使える環境なら
   `<:name:id>` に差し替えるだけで反映されます。
 - `brand` — `name`, `footer`, `airline`
 - `options` — `timezone`（`Asia/Tokyo` などの IANA 名。スケジュールに使用）

@@ -540,7 +540,6 @@ async def auto_remind_task():
             pass
 
     target_role_ids = [C.ROLE_FLIGHT_OPS, C.ROLE_CABIN_CREWS, C.ROLE_GROUND_OPS]
-    target_role_ids.extend(C.ROLE_BUS_DRIVERS)
     
     staff_guild = C.client.get_guild(C.STAFF_GUILD_ID)
     if not staff_guild: return
@@ -571,10 +570,7 @@ async def auto_remind_task():
     for f in upcoming_flights:
         ts = int(f["start_timestamp"])
         staff_msg_link = f"https://discord.com/channels/{C.STAFF_GUILD_ID}/{C.STAFF_CHANNEL_ID}/{f['staff_message_id']}"
-        if f.get("is_bus"):
-            schedule_text += f"**[{f['flight_code']}]({staff_msg_link})** (<t:{ts}:f>) - Route: {f['origin']}\n"
-        else:
-            schedule_text += f"**[{f['flight_code']}]({staff_msg_link})** (<t:{ts}:f>) - {f['origin']} ➝ {f.get('destination', 'Unknown')}\n"
+        schedule_text += f"**[{f['flight_code']}]({staff_msg_link})** (<t:{ts}:f>) - {f['origin']} ➝ {f.get('destination', 'Unknown')}\n"
             
     if not schedule_text:
         schedule_text = "*No upcoming flights are scheduled for the rest of this month.*\n"
@@ -923,8 +919,7 @@ async def on_message(message):
                 "Start Time": "passenger_time_str",
                 "Timezone": "host_timezone_str",
                 "Airport": "roblox_link", "Airline": "airline",
-                "Color": "color",
-                "Bus": "equipment"
+                "Color": "color"
             }
             for line in lines:
                 clean_line = line.lstrip('>').strip()
@@ -936,7 +931,7 @@ async def on_message(message):
                     if "Flight Information" in clean_line:
                         continue
 
-                    if "flight_code" not in parse_data and (re.match(r'^[A-Za-z]{2,3}\d+$', clean_line) or "Transport" in clean_line or "Bus" in clean_line):
+                    if "flight_code" not in parse_data and re.match(r'^[A-Za-z]{2,3}\d+$', clean_line):
                         parse_data["flight_code"] = clean_line
                     continue
                 key = key.strip()
@@ -950,13 +945,7 @@ async def on_message(message):
                 parse_data["color"] = parse_data["color"].replace("#", "")
 
 
-            fc = parse_data.get("flight_code", "")
-            if "Transport" in fc or "Bus" in fc:
-                parse_data.setdefault("destination", "")
-                parse_data.setdefault("classes", "")
-                required_keys = ["flight_code", "origin", "equipment", "roblox_link"]
-            else:
-                required_keys = ["flight_code", "origin", "destination", "equipment", "classes", "roblox_link"]
+            required_keys = ["flight_code", "origin", "destination", "equipment", "classes", "roblox_link"]
 
             has_static = all(k in parse_data for k in required_keys)
             has_time = all(
@@ -1059,9 +1048,6 @@ async def aircraft_guide_cmd(interaction: discord.Interaction, equipment: str):
 
     for fc, route_data in C.FLIGHT_DB.items():
 
-        if "Transport" in fc or "Bus" in fc:
-            continue
-            
         variants = route_data.get("variants", {})
         for eq, v_data in variants.items():
             if eq.lower() == equipment.lower():
@@ -1373,15 +1359,12 @@ async def loa_list_cmd(interaction: discord.Interaction):
     equipment="Aircraft Type",
     staff_meet_datetime="Meeting Time (YYYY-MM-DD HH:MM)",
     passenger_start_time="Start Time (HH:MM)",
-    host_timezone="Timezone",
-    use_bus="Whether to use the bus service"
+    host_timezone="Timezone"
 )
 @app_commands.autocomplete(flight_code=C.flight_code_autocomplete, equipment=C.equipment_autocomplete)
-@app_commands.choices(use_bus=[app_commands.Choice(name="Yes", value=1), app_commands.Choice(name="No", value=0)])
 @C.event_manager_only
 async def create_flight_slash(interaction: discord.Interaction, flight_code: str, equipment: str,
-                               staff_meet_datetime: str, passenger_start_time: str, host_timezone: str = "GMT+9",
-                               use_bus: int = 0):
+                               staff_meet_datetime: str, passenger_start_time: str, host_timezone: str = "GMT+9"):
     if interaction.guild_id != C.STAFF_GUILD_ID or (not C.is_event_manager_or_chief(interaction.user) and not (C.TEST_MODE and C._test_admin_allowed(interaction.user))):
         return await interaction.response.send_message(ephemeral=True, allowed_mentions=discord.AllowedMentions.none(), view=C.build_v2_card('Notice', [(None, 'No permission.')]))
     await interaction.response.defer(ephemeral=True)
@@ -1418,8 +1401,7 @@ async def create_flight_slash(interaction: discord.Interaction, flight_code: str
         "staff_meet_datetime_str": staff_meet_datetime, "passenger_time_str": passenger_start_time,
         "host_timezone_str": host_timezone,
         "mention_str": f"<@&{C.NOTIFICATION_ROLE_ID}>",
-        "is_custom": False,
-        "use_bus": bool(use_bus)
+        "is_custom": False
     }
 
     if C.TEST_MODE:
@@ -1442,7 +1424,7 @@ async def create_flight_slash(interaction: discord.Interaction, flight_code: str
                 "host_id": interaction.user.id, "is_test": True, "messages_deleted": False,
                 "briefing_sent": False, "briefing_assignments": {}, "briefing_state": {},
                 "briefing_lang": "EN", "test_mode": True,
-                "use_bus": data.get("use_bus", False), "is_bus": False, "event_url": "",
+                "event_url": "",
                 "mention_str": data.get("mention_str", ""), "notified_20min": False,
                 "accepted_users": [interaction.user.id], "declined_users": [],
             }
@@ -1476,15 +1458,12 @@ async def create_flight_slash(interaction: discord.Interaction, flight_code: str
     equipment="Aircraft Type",
     staff_meet_datetime="Meeting Time (YYYY-MM-DD HH:MM)",
     passenger_start_time="Start Time (HH:MM)",
-    host_timezone="Timezone",
-    use_bus="Whether to use the bus service"
+    host_timezone="Timezone"
 )
 @app_commands.autocomplete(flight_code=C.flight_code_autocomplete, equipment=C.equipment_autocomplete)
-@app_commands.choices(use_bus=[app_commands.Choice(name="Yes", value=1), app_commands.Choice(name="No", value=0)])
 @C.event_manager_only
 async def create_flighttest_slash(interaction: discord.Interaction, flight_code: str, equipment: str,
-                                  staff_meet_datetime: str, passenger_start_time: str, host_timezone: str = "GMT+9",
-                                  use_bus: int = 0):
+                                  staff_meet_datetime: str, passenger_start_time: str, host_timezone: str = "GMT+9"):
     if not C.is_event_manager_or_chief(interaction.user):
         return await interaction.response.send_message(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'No permission.')]))
     await interaction.response.defer(ephemeral=True)
@@ -1519,11 +1498,10 @@ async def create_flighttest_slash(interaction: discord.Interaction, flight_code:
         "color": variant_data.get("color", "1B3444"),
         "staff_meet_datetime_str": staff_meet_datetime, 
         "passenger_time_str": passenger_start_time,
-        "host_timezone_str": host_timezone,
-        "use_bus": bool(use_bus)
+        "host_timezone_str": host_timezone
     }
 
-    success, result_msg = await C.process_flighttest_creation(interaction.user, data, image_bytes, image_url, is_bus=bool(use_bus))
+    success, result_msg = await C.process_flighttest_creation(interaction.user, data, image_bytes, image_url)
     if success:
         await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Created Successfully (TEST)', result_msg, discord.Color.green()), content=None), ephemeral=True)
     else:

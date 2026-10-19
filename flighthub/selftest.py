@@ -697,7 +697,7 @@ async def _st_data_suite(rep, invoker, st):
     async def t_flightlog():
         fl = copy.deepcopy(flight)
         fl["selftest_log_channel_id"] = ch.id
-        checks = {"fc": True, "cc": True, "gc": False, "bus": None}
+        checks = {"fc": True, "cc": True, "gc": False}
         modal = C.FlightLogModal(fl, checks, absent_users=[])
         modal.comments._value = "selftest comment"
         fi = _StInteraction(invoker, channel=ch, guild=guild)
@@ -719,7 +719,7 @@ async def _st_data_suite(rep, invoker, st):
     await _st_step(rep, sec, "Flight-log (post → parse with test data)", t_flightlog)
 
     async def t_flightlog_view():
-        v = C.FlightLogAbsentView(copy.deepcopy(flight), {"fc": True, "cc": True, "gc": True, "bus": None})
+        v = C.FlightLogAbsentView(copy.deepcopy(flight), {"fc": True, "cc": True, "gc": True})
         await ch.send(content="selftest: FlightLogAbsentView", view=v)
         v.stop()
     await _st_step(rep, sec, "Send the Flight-log absentee-selection view", t_flightlog_view)
@@ -858,7 +858,7 @@ async def _st_views_global(rep):
 
     async def t_dynamic():
         for cls, cid in ((C.SurveyRatingItem, "survey:r:JI54:123456789012345678:organization:3"),
-                         (C.SurveyCommentItem, "survey:c:Bus (JI54):123456789012345678")):
+                         (C.SurveyCommentItem, "survey:c:Custom (JI54):123456789012345678")):
             tmpl = getattr(cls, "__discord_ui_compiled_template__", None)
             assert tmpl is not None and tmpl.fullmatch(cid), f"custom_id template mismatch for {cls.__name__}"
         c = C.SurveyRatingItem("JI54", 1, "overall", "5")

@@ -423,12 +423,11 @@ async def edit_gamenight_cmd(
     comment="Optional comment to add below the message",
     include_fc="Whether to include Flight Crew (default: True)",
     include_cc="Whether to include Cabin Crew (default: True)",
-    include_gc="Whether to include Ground Crew (default: True)",
-    include_bus="Whether to include Bus Drivers (default: True)"
+    include_gc="Whether to include Ground Crew (default: True)"
 )
 async def remind_cmd(interaction: discord.Interaction, comment: str = None, 
                      include_fc: bool = True, include_cc: bool = True, 
-                     include_gc: bool = True, include_bus: bool = True):
+                     include_gc: bool = True):
                      
     if C.LOG_MANAGER_ROLE_ID not in [r.id for r in interaction.user.roles] and not C.is_chief(interaction.user):
         return await interaction.response.send_message(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'You do not have permission to run this command.')]))
@@ -462,7 +461,6 @@ async def remind_cmd(interaction: discord.Interaction, comment: str = None,
     if include_fc: target_role_ids.append(C.ROLE_FLIGHT_OPS)
     if include_cc: target_role_ids.append(C.ROLE_CABIN_CREWS)
     if include_gc: target_role_ids.append(C.ROLE_GROUND_OPS)
-    if include_bus: target_role_ids.extend(C.ROLE_BUS_DRIVERS)
 
     target_members = []
     staff_guild = C.client.get_guild(C.STAFF_GUILD_ID)
@@ -493,10 +491,7 @@ async def remind_cmd(interaction: discord.Interaction, comment: str = None,
     for f in upcoming_flights:
         ts = int(f["start_timestamp"])
         staff_msg_link = f"https://discord.com/channels/{C.STAFF_GUILD_ID}/{C.STAFF_CHANNEL_ID}/{f['staff_message_id']}"
-        if f.get("is_bus"):
-            schedule_text += f"**[{f['flight_code']}]({staff_msg_link})** (<t:{ts}:f>) - Route: {f['origin']}\n"
-        else:
-            schedule_text += f"**[{f['flight_code']}]({staff_msg_link})** (<t:{ts}:f>) - {f['origin']} ➝ {f.get('destination', 'Unknown')}\n"
+        schedule_text += f"**[{f['flight_code']}]({staff_msg_link})** (<t:{ts}:f>) - {f['origin']} ➝ {f.get('destination', 'Unknown')}\n"
 
     if not schedule_text:
         schedule_text = "*No upcoming flights are scheduled for the rest of this month.*\n"

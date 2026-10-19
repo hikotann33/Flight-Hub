@@ -20,18 +20,13 @@ from . import core as C
     staff_meet_datetime="Staff Meet Time (YYYY-MM-DD HH:MM)", passenger_start_time="Pax Join Time (HH:MM)",
     host_timezone="Timezone (e.g., GMT+9)", image="Upload flight image",
     event_title="[Optional] Custom event title",
-    mention_role_1="[Optional] Notification role 1", mention_role_2="[Optional] Notification role 2", mention_all="[Optional] @everyone etc.",
-    use_bus="Whether to use the bus service"
+    mention_role_1="[Optional] Notification role 1", mention_role_2="[Optional] Notification role 2", mention_all="[Optional] @everyone etc."
 )
 @app_commands.autocomplete(mention_role_1=C.customer_role_autocomplete, mention_role_2=C.customer_role_autocomplete)
 @app_commands.choices(
     mention_all=[
         app_commands.Choice(name="None", value="none"),
         app_commands.Choice(name="@here", value="@here")
-    ],
-    use_bus=[
-        app_commands.Choice(name="Yes", value=1), 
-        app_commands.Choice(name="No", value=0)
     ]
 )
 @C.event_manager_only
@@ -41,7 +36,7 @@ async def create_custom_flight_slash(
         staff_meet_datetime: str, passenger_start_time: str, image: discord.Attachment,
         host_timezone: str = "GMT+9",
         event_title: str = None, mention_role_1: str = None, mention_role_2: str = None,
-        mention_all: str = "none",use_bus: int = 0
+        mention_all: str = "none"
         ):
     if interaction.guild_id != C.STAFF_GUILD_ID or not C.is_event_manager_or_chief(interaction.user):
         return await interaction.response.send_message(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'No permission.')]))
@@ -75,8 +70,7 @@ async def create_custom_flight_slash(
         "host_timezone_str": host_timezone,
         "event_title": event_title,
         "mention_str": " ".join(mentions_list),
-        "is_custom": True,
-        "use_bus": bool(use_bus)
+        "is_custom": True
     }
 
     success, result_msg = await C.process_flight_creation(interaction.user, data, image_bytes,
@@ -267,14 +261,7 @@ async def update_cmd(interaction: discord.Interaction, full_reload: bool = True)
     equipment="Aircraft (e.g., B777)", classes="Classes (e.g., Economy)", roblox_link="Game Link",
     staff_meet_datetime="Staff Meet Time (YYYY-MM-DD HH:MM)", passenger_start_time="Pax Join Time (HH:MM)",
     host_timezone="Timezone (e.g., GMT+9)", image="Upload flight image",
-    event_title="[Optional] Custom event title",
-    use_bus="Whether to use the bus service"
-)
-@app_commands.choices(
-    use_bus=[
-        app_commands.Choice(name="Yes", value=1),
-        app_commands.Choice(name="No", value=0)
-    ]
+    event_title="[Optional] Custom event title"
 )
 @C.event_manager_only
 async def create_private_flight_slash(
@@ -282,7 +269,7 @@ async def create_private_flight_slash(
         equipment: str, classes: str, roblox_link: str,
         staff_meet_datetime: str, passenger_start_time: str, image: discord.Attachment,
         host_timezone: str = "GMT+9",
-        event_title: str = None, use_bus: int = 0
+        event_title: str = None
         ):
     if interaction.guild_id != C.STAFF_GUILD_ID or not C.is_event_manager_or_chief(interaction.user):
         return await interaction.response.send_message(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'No permission.')]))
@@ -306,8 +293,7 @@ async def create_private_flight_slash(
         "event_title": event_title,
         "mention_str": "",
         "is_custom": True,
-        "is_private": True,
-        "use_bus": bool(use_bus)
+        "is_private": True
     }
 
     success, result_msg = await C.process_flight_creation(interaction.user, data, image_bytes,
@@ -325,16 +311,14 @@ async def create_private_flight_slash(
     staff_meet_datetime="Staff Meet Time (YYYY-MM-DD HH:MM)",
     passenger_start_time="Pax Join Time (HH:MM)",
     host_timezone="Timezone (e.g., GMT+9)",
-    event_title="[Optional] Custom event title",
-    use_bus="Whether to use the bus service"
+    event_title="[Optional] Custom event title"
 )
 @app_commands.autocomplete(flight_code=C.flight_code_autocomplete, equipment=C.equipment_autocomplete)
-@app_commands.choices(use_bus=[app_commands.Choice(name="Yes", value=1), app_commands.Choice(name="No", value=0)])
 @C.event_manager_only
 async def create_private_flight_template_slash(
         interaction: discord.Interaction, flight_code: str, equipment: str,
         staff_meet_datetime: str, passenger_start_time: str,
-        host_timezone: str = "GMT+9", event_title: str = None, use_bus: int = 0):
+        host_timezone: str = "GMT+9", event_title: str = None):
     if interaction.guild_id != C.STAFF_GUILD_ID or not C.is_event_manager_or_chief(interaction.user):
         return await interaction.response.send_message(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'No permission.')]))
     await interaction.response.defer(ephemeral=True)
@@ -379,8 +363,7 @@ async def create_private_flight_template_slash(
         "event_title": event_title,
         "mention_str": "",
         "is_custom": True,
-        "is_private": True,
-        "use_bus": bool(use_bus)
+        "is_private": True
     }
 
     success, result_msg = await C.process_flight_creation(interaction.user, data, image_bytes, saved_msg.attachments[0].url)
@@ -457,10 +440,7 @@ async def host_change(interaction: discord.Interaction, flight_code: str, new_ho
                 event = await c_guild.fetch_scheduled_event(eid)
                 
 
-                if target.get("is_bus"):
-                    nd = f"`Host` {new_host.mention}\n`Server` {target['origin']}\n> Information\n`Operator` {target.get('airline', 'Airline')}\n`Vehicle` {target['equipment']}"
-                else:
-                    nd = f"`Host` {new_host.mention}\n`Origin` {target['origin']}\n`Destination` {target['destination']}\n> Information\n`Airline` {target.get('airline', 'Airline')}\n`Aircraft` {target['equipment']}\n`Classes` {target['classes']}"
+                nd = f"`Host` {new_host.mention}\n`Origin` {target['origin']}\n`Destination` {target['destination']}\n> Information\n`Airline` {target.get('airline', 'Airline')}\n`Aircraft` {target['equipment']}\n`Classes` {target['classes']}"
                 
                 await event.edit(description=nd)
             except:
@@ -542,7 +522,6 @@ async def sync_flight_ui(interaction: discord.Interaction, flight_code: str):
             if loa_removed_count > 0:
                 status_log.append(f"Removed {loa_removed_count} user(s) currently on LOA.")
 
-            is_bus = flight.get("is_bus", False)
             clean_equip = (flight.get("equipment", "") or "").replace(" (Registered)", "").replace("(Registered)", "").strip()
 
 
@@ -560,7 +539,7 @@ async def sync_flight_ui(interaction: discord.Interaction, flight_code: str):
 
                 if not flight.get("is_custom"):
                     _t_origin = C.FLIGHT_DB[tmpl_code].get("origin")
-                    _t_dest = _t_origin if is_bus else C.FLIGHT_DB[tmpl_code].get("destination")
+                    _t_dest = C.FLIGHT_DB[tmpl_code].get("destination")
                     if _t_origin and (flight.get("origin") != _t_origin or (_t_dest and flight.get("destination") != _t_dest)):
                         status_log.append(f"Route synced: {flight.get('origin')}→{flight.get('destination')} ⇒ {_t_origin}→{_t_dest}")
                         flight["origin"] = _t_origin
@@ -636,21 +615,19 @@ async def sync_flight_ui(interaction: discord.Interaction, flight_code: str):
                     new_embed = old_embed.copy()
                     new_embed.title = C.signup_embed_title(flight, C.build_flight_event_name(flight))
                     new_embed.colour = C.PRIVATE_FLIGHT_COLOR if flight.get("is_private") else embed_color
-                    min_staff_ui = C.minimum_staff_text(use_bus=flight.get("use_bus"))
+                    min_staff_ui = C.minimum_staff_text()
                     for i, fld in enumerate(new_embed.fields):
                         n, v = fld.name, None
                         if n == "Host":
                             v = host_name
-                        elif n == "Route / Server":
-                            v = origin
                         elif n == "Route":
                             v = f"{origin} ➝ {dest}"
-                        elif n in ("Vehicle", "Aircraft Equipment"):
+                        elif n == "Aircraft Equipment":
                             v = equipment
                         elif n == "Aircraft Operator":
                             v = airline
                         elif n == "Minimum Staff Needed":
-                            v = C.minimum_staff_text(is_bus=True) if is_bus else min_staff_ui
+                            v = min_staff_ui
                         elif n == "Action":
                             head = (fld.value or "React to join.").split("\n")[0]
                             v = f"{head}\n**Staff Briefing Time:** <t:{staff_ts}:F>" + C.google_calendar_suffix(flight, start_ts=staff_ts)
@@ -754,7 +731,7 @@ async def sync_flight_ui(interaction: discord.Interaction, flight_code: str):
                 status_log.append(f"Event Sync Failed: {e}")
 
 
-        if flight.get("briefing_thread_id") and not is_bus and not is_gn:
+        if flight.get("briefing_thread_id") and not is_gn:
             try:
                 th = C.client.get_channel(flight["briefing_thread_id"]) or await C.client.fetch_channel(flight["briefing_thread_id"])
                 new_th_name = f"{flight['flight_code']} {origin}→{dest}"[:100]
@@ -1030,13 +1007,12 @@ async def create_discord_recurring_event(guild_id, name, desc, start_ts, end_ts,
                 print(f"Recurring Event Error: {await resp.text()}")
                 return None, None
 
-async def process_recurring_creation(interaction, flight_code, equipment, frequency, staff_meet, pass_start, host_timezone, use_bus, is_test=False):
+async def process_recurring_creation(interaction, flight_code, equipment, frequency, staff_meet, pass_start, host_timezone, is_test=False):
     _blocked = C.db_write_blocked_message()
     if _blocked:
         return await interaction.followup.send(ephemeral=True, view=C.build_v2_card('Notice', [(None, _blocked)]))
-    is_bus = bool(use_bus)
     core_code = f"[TEST] {flight_code}" if is_test else flight_code
-    save_flight_code = f"Bus ({core_code})" if is_bus else core_code
+    save_flight_code = core_code
 
     async with C.global_json_lock:
         if any(f["flight_code"] == save_flight_code and not f.get("messages_deleted") for f in C.FLIGHT_LOG_CACHE):
@@ -1089,12 +1065,8 @@ async def process_recurring_creation(interaction, flight_code, equipment, freque
 
     guild_id = C.STAFF_GUILD_ID if is_test else C.CUSTOMER_GUILD_ID
     
-    if is_bus:
-        event_title = flight_code
-        desc = f"`Host` <@{interaction.user.id}>\n`Server` {saved_route['origin']}\n> Information\n`Operator` {airline}\n`Vehicle` {clean_equip}"
-    else:
-        event_title = f"{flight_code} {saved_route['origin']}→{saved_route['destination']}"
-        desc = f"`Host` <@{interaction.user.id}>\n`Origin` {saved_route['origin']}\n`Destination` {saved_route['destination']}\n> Information\n`Airline` {airline}\n`Aircraft` {clean_equip}\n`Classes` {variant_data.get('classes', 'Unknown')}"
+    event_title = f"{flight_code} {saved_route['origin']}→{saved_route['destination']}"
+    desc = f"`Host` <@{interaction.user.id}>\n`Origin` {saved_route['origin']}\n`Destination` {saved_route['destination']}\n> Information\n`Airline` {airline}\n`Aircraft` {clean_equip}\n`Classes` {variant_data.get('classes', 'Unknown')}"
     
     event_id, event_url = await create_discord_recurring_event(
         guild_id, event_title, desc, int(pass_dt.timestamp()), int(end_dt.timestamp()), 
@@ -1114,7 +1086,7 @@ async def process_recurring_creation(interaction, flight_code, equipment, freque
     data = {
         "flight_code": save_flight_code,
         "origin": saved_route["origin"],
-        "destination": saved_route["destination"] if not is_bus else "",
+        "destination": saved_route["destination"],
         "equipment": clean_equip,
         "classes": variant_data.get("classes", "Unknown"),
         "airline": airline,
@@ -1138,8 +1110,6 @@ async def process_recurring_creation(interaction, flight_code, equipment, freque
         "recurring_freq": frequency,
         "child_spawned": False,
         "is_test": is_test,
-        "use_bus": is_bus,
-        "is_bus": is_bus,
         "accepted_users": [interaction.user.id],
         "declined_users": []
     }
@@ -1149,16 +1119,9 @@ async def process_recurring_creation(interaction, flight_code, equipment, freque
     _creator_name = await C.get_server_display_name(interaction.user.id, C.STAFF_GUILD_ID, fallback=interaction.user.display_name)
     staff_embed.add_field(name="Host", value=_creator_name, inline=False)
     
-    if is_bus:
-        staff_embed.add_field(name="Route / Server", value=data['origin'], inline=False)
-        staff_embed.add_field(name="Vehicle", value=data['equipment'], inline=False)
-        staff_embed.add_field(name="Minimum Staff Needed", value="Bus Driver - 2\nDispatcher - 2", inline=False)
-    else:
-        staff_embed.add_field(name="Route", value=f"{data['origin']} ➝ {data['destination']}", inline=False)
-        staff_embed.add_field(name="Aircraft Equipment", value=data['equipment'], inline=False)
-        min_staff = "Captain - 1\nFirst Officer - 1\nCabin Crew - 2\nGround Crew - 1"
-        if data.get("use_bus"): min_staff += "\nBus Driver - 2"
-        staff_embed.add_field(name="Minimum Staff Needed", value=min_staff, inline=False)
+    staff_embed.add_field(name="Route", value=f"{data['origin']} ➝ {data['destination']}", inline=False)
+    staff_embed.add_field(name="Aircraft Equipment", value=data['equipment'], inline=False)
+    staff_embed.add_field(name="Minimum Staff Needed", value=C.minimum_staff_text(), inline=False)
 
     staff_embed.add_field(name="Action", value=f"React to join.\n**Staff Briefing Time:** <t:{data['staff_timestamp']}:F>" + C.google_calendar_suffix(data, start_ts=data['staff_timestamp']), inline=False)
     staff_embed.add_field(name="Time", value=f"<t:{data['start_timestamp']}:F> - <t:{data['end_timestamp']}:t>" + C.google_calendar_suffix(data), inline=False)
@@ -1173,33 +1136,20 @@ async def process_recurring_creation(interaction, flight_code, equipment, freque
 
     c_channel = C.client.get_channel(data["customer_channel_id"])
     lock_ts = data["start_timestamp"] + 1200
-    if is_bus:
-        cust_msg_content = (
-            f"{C.EMOJI_TAIL_STR} **Recurring Operation**\n"
-            f"Operation name: {flight_code}\n"
-            f"Operator: {airline}\n"
-            f"Server: {data['origin']}\n"
-            f"Date: <t:{data['start_timestamp']}:D>\n"
-            f"Check-in Time: <t:{data['start_timestamp']}:t>\n"
-            f"Vehicle: {data['equipment']}\n"
-            f"{C.get_customer_mention_line(data)}"
-            f"{C.EMOJI_LINK_STR} **[Discord Event Link]({event_url})**"
-        )
-    else:
-        cust_msg_content = (
-            f"{C.EMOJI_TAIL_STR} **Recurring Flight**\n"
-            f"Flight code: {flight_code}\n"
-            f"Airline: {airline}\n"
-            f"Departure Airport: {data['origin']}\n"
-            f"Arrival Airport: {data['destination']}\n"
-            f"Date: <t:{data['start_timestamp']}:D>\n"
-            f"Check-in Time: <t:{data['start_timestamp']}:t>\n"
-            f"Server Lock: <t:{lock_ts}:t>\n"
-            f"Equipment: {data['equipment']}\n"
-            f"Classes: {data.get('classes', 'Unknown')}\n"
-            f"{C.get_customer_mention_line(data)}"
-            f"{C.EMOJI_LINK_STR} **[Discord Event Link]({event_url})**"
-        )
+    cust_msg_content = (
+        f"{C.EMOJI_TAIL_STR} **Recurring Flight**\n"
+        f"Flight code: {flight_code}\n"
+        f"Airline: {airline}\n"
+        f"Departure Airport: {data['origin']}\n"
+        f"Arrival Airport: {data['destination']}\n"
+        f"Date: <t:{data['start_timestamp']}:D>\n"
+        f"Check-in Time: <t:{data['start_timestamp']}:t>\n"
+        f"Server Lock: <t:{lock_ts}:t>\n"
+        f"Equipment: {data['equipment']}\n"
+        f"Classes: {data.get('classes', 'Unknown')}\n"
+        f"{C.get_customer_mention_line(data)}"
+        f"{C.EMOJI_LINK_STR} **[Discord Event Link]({event_url})**"
+    )
     if is_test:
         cust_msg = await c_channel.send(content=cust_msg_content, suppress_embeds=True)
     else:
@@ -1228,24 +1178,20 @@ async def process_recurring_creation(interaction, flight_code, equipment, freque
     frequency="Frequency",
     staff_meet_datetime="Meeting Time (YYYY-MM-DD HH:MM)",
     passenger_start_time="Start Time (HH:MM)",
-    host_timezone="Timezone",
-    use_bus="Whether to use the bus service"
+    host_timezone="Timezone"
 )
 @app_commands.autocomplete(flight_code=C.flight_code_autocomplete, equipment=C.equipment_autocomplete)
 @app_commands.choices(frequency=[
     app_commands.Choice(name="Daily", value=1),
     app_commands.Choice(name="Weekly", value=2),
     app_commands.Choice(name="Bi-Weekly", value=3)
-], use_bus=[
-    app_commands.Choice(name="Yes", value=1), 
-    app_commands.Choice(name="No", value=0)
 ])
 @C.event_manager_only
-async def recurring_flight_cmd(interaction: discord.Interaction, flight_code: str, equipment: str, frequency: int, staff_meet_datetime: str, passenger_start_time: str, host_timezone: str = "GMT+9", use_bus: int = 0):
+async def recurring_flight_cmd(interaction: discord.Interaction, flight_code: str, equipment: str, frequency: int, staff_meet_datetime: str, passenger_start_time: str, host_timezone: str = "GMT+9"):
     if not C.is_event_manager_or_chief(interaction.user):
         return await interaction.response.send_message(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'No permission.')]))
     await interaction.response.defer(ephemeral=True)
-    await process_recurring_creation(interaction, flight_code, equipment, frequency, staff_meet_datetime, passenger_start_time, host_timezone, use_bus, is_test=False)
+    await process_recurring_creation(interaction, flight_code, equipment, frequency, staff_meet_datetime, passenger_start_time, host_timezone, is_test=False)
 
 @C.client.tree.command(name="recurring_flighttest", description="[TEST] Create a recurring flight (native Discord repeating event) on the test server.")
 @app_commands.describe(
@@ -1254,21 +1200,17 @@ async def recurring_flight_cmd(interaction: discord.Interaction, flight_code: st
     frequency="Frequency",
     staff_meet_datetime="Meeting Time (YYYY-MM-DD HH:MM)",
     passenger_start_time="Start Time (HH:MM)",
-    host_timezone="Timezone",
-    use_bus="Whether to use the bus service"
+    host_timezone="Timezone"
 )
 @app_commands.autocomplete(flight_code=C.flight_code_autocomplete, equipment=C.equipment_autocomplete)
 @app_commands.choices(frequency=[
     app_commands.Choice(name="Daily", value=1),
     app_commands.Choice(name="Weekly", value=2),
     app_commands.Choice(name="Bi-Weekly", value=3)
-], use_bus=[
-    app_commands.Choice(name="Yes", value=1), 
-    app_commands.Choice(name="No", value=0)
 ])
 @C.event_manager_only
-async def recurring_flighttest_cmd(interaction: discord.Interaction, flight_code: str, equipment: str, frequency: int, staff_meet_datetime: str, passenger_start_time: str, host_timezone: str = "GMT+9", use_bus: int = 0):
+async def recurring_flighttest_cmd(interaction: discord.Interaction, flight_code: str, equipment: str, frequency: int, staff_meet_datetime: str, passenger_start_time: str, host_timezone: str = "GMT+9"):
     if not C.is_event_manager_or_chief(interaction.user):
         return await interaction.response.send_message(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'No permission.')]))
     await interaction.response.defer(ephemeral=True)
-    await process_recurring_creation(interaction, flight_code, equipment, frequency, staff_meet_datetime, passenger_start_time, host_timezone, use_bus, is_test=True)
+    await process_recurring_creation(interaction, flight_code, equipment, frequency, staff_meet_datetime, passenger_start_time, host_timezone, is_test=True)

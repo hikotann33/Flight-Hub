@@ -21,16 +21,6 @@ DEFAULT_TEMPLATES = {
         "Classes: {Classes}\n"
         "{Reason}{Mention}{Event Link}"
     ),
-    "customer_post_bus": (
-        "{Emoji} **Operation Information**{Updated}\n"
-        "Operation name: {Flight Code}\n"
-        "Operator: {Operator}\n"
-        "Server: {Server}\n"
-        "Date: {Date}\n"
-        "Check-in Time: {Check-in Time}\n"
-        "Vehicle: {Vehicle}\n"
-        "{Reason}{Mention}{Event Link}"
-    ),
     "customer_post_recurring": (
         "{Emoji} **Recurring Flight**\n"
         "Flight code: {Flight Code}\n"
@@ -44,16 +34,6 @@ DEFAULT_TEMPLATES = {
         "Classes: {Classes}\n"
         "{Mention}{Event Link}"
     ),
-    "customer_post_recurring_bus": (
-        "{Emoji} **Recurring Operation**\n"
-        "Operation name: {Flight Code}\n"
-        "Operator: {Operator}\n"
-        "Server: {Server}\n"
-        "Date: {Date}\n"
-        "Check-in Time: {Check-in Time}\n"
-        "Vehicle: {Vehicle}\n"
-        "{Mention}{Event Link}"
-    ),
     "calendar_description": (
         "`Host` {Host Mention}\n"
         "`Origin` {Origin}\n"
@@ -63,13 +43,6 @@ DEFAULT_TEMPLATES = {
         "`Aircraft` {Equipment}\n"
         "`Classes` {Classes}"
     ),
-    "calendar_description_bus": (
-        "`Host` {Host Mention}\n"
-        "`Server` {Server}\n"
-        "> Information\n"
-        "`Operator` {Operator}\n"
-        "`Vehicle` {Vehicle}"
-    ),
 }
 
 TEMPLATE_LABELS = {
@@ -77,23 +50,17 @@ TEMPLATE_LABELS = {
     "staff_description_test": "Staff description (test operation)",
     "staff_description_recurring": "Staff description (recurring operation)",
     "customer_post": "Customer post description",
-    "customer_post_bus": "Customer post description (bus)",
     "customer_post_recurring": "Customer post description (recurring)",
-    "customer_post_recurring_bus": "Customer post description (recurring bus)",
     "calendar_description": "Customer calendar description",
-    "calendar_description_bus": "Customer calendar description (bus)",
 }
 
 TOKEN_HELP = [
     ("{Flight Code}", "Flight / operation code"),
-    ("{Airline}", "Airline / operator name"),
-    ("{Operator}", "Operator name (bus)"),
-    ("{Origin}", "Departure airport / server"),
-    ("{Server}", "Server name (bus)"),
+    ("{Airline}", "Airline name"),
+    ("{Origin}", "Departure airport"),
     ("{Destination}", "Arrival airport"),
     ("{Route}", "Origin ➝ Destination"),
     ("{Equipment}", "Aircraft / equipment"),
-    ("{Vehicle}", "Vehicle (bus)"),
     ("{Classes}", "Service classes"),
     ("{Date}", "Date (localized)"),
     ("{Check-in Time}", "Check-in / start time"),

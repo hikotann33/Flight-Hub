@@ -61,7 +61,6 @@
     "bot_role": null,
     "bot_shovel_blue": null,
     "bot_zundamon": null,
-    "bus_driver": null,
     "cabin_crew": null,
     "ceo": null,
     "certifications": null,
@@ -71,7 +70,6 @@
     "chief_executive_ranks": null,
     "coo": null,
     "developer": null,
-    "dispatcher": null,
     "dm_exclude": null,
     "dm_staff": null,
     "dm_target": null,
@@ -130,12 +128,12 @@
     "brand": null,
     "flight_approved": null,
     "signup_type": {
-      "flight": "",
-      "bus": "",
-      "test": "",
-      "recurring": "",
-      "private": "",
-      "gamenight": ""
+      "flight": "✈️",
+      "custom": "🛠️",
+      "test": "🧪",
+      "recurring": "🔁",
+      "private": "🔒",
+      "gamenight": "🎮"
     }
   },
   "options": {

@@ -33,7 +33,7 @@ class FlightAppModal(discord.ui.Modal):
         await C.process_flight_application(interaction, self.departure_date, self.departure_time, self.tz_str, self.offset_hrs, self.flight_code_input.value.strip(), self.origin_input.value.strip(), self.dest_input.value.strip(), self.equipment_input.value, self.detail_input.value.strip())
 
 async def flight_app_code_autocomplete(interaction: discord.Interaction, current: str):
-    choices = [app_commands.Choice(name=item["label"], value=item["value"]) for item in C.FLIGHT_AUTOCOMPLETE_CACHE if "Bus" not in item["value"] and "Transport" not in item["value"] and current.lower() in item["search"]][:24]
+    choices = [app_commands.Choice(name=item["label"], value=item["value"]) for item in C.FLIGHT_AUTOCOMPLETE_CACHE if current.lower() in item["search"]][:24]
     choices.append(app_commands.Choice(name="Other", value="Other"))
     return choices
 
@@ -107,7 +107,7 @@ async def inactive_staff_cmd(interaction: discord.Interaction):
         return await interaction.followup.send(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'Could not fetch staff server information.')]))
 
 
-    target_roles = [C.ROLE_FLIGHT_OPS, C.ROLE_CABIN_CREWS, C.ROLE_GROUND_OPS, C.ROLE_BUS_DRIVER_1]
+    target_roles = [C.ROLE_FLIGHT_OPS, C.ROLE_CABIN_CREWS, C.ROLE_GROUND_OPS]
     inactive_members = []
 
     for member in staff_guild.members:

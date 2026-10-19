@@ -215,8 +215,7 @@ async def dispatch_app_cmd(interaction: discord.Interaction, message_id: str):
         "host_timezone_str": app_data["tz"],
         "event_title": None,
         "mention_str": f"<@&{C.NOTIFICATION_ROLE_ID}>",
-        "is_custom": False,
-        "use_bus": False
+        "is_custom": False
     }
 
     host_user = interaction.guild.get_member(app_data["host_id"]) or interaction.user
@@ -1290,10 +1289,6 @@ async def briefing_command(interaction: discord.Interaction, flight_code: str, l
         staff_guild = interaction.guild
         eligible = []
         test_role_ids = {C.ROLE_FLIGHT_OPS, C.ROLE_CABIN_CREWS, C.ROLE_GROUND_OPS}
-        if isinstance(C.ROLE_BUS_DRIVERS, (tuple, list, set)):
-            test_role_ids.update(C.ROLE_BUS_DRIVERS)
-        else:
-            test_role_ids.add(C.ROLE_BUS_DRIVERS)
         if staff_guild:
             for member in staff_guild.members:
                 if member.bot or member.id == flight.get("host_id"):
@@ -1373,16 +1368,15 @@ async def edit_briefing_cmd(interaction: discord.Interaction, flight_code: str):
                                             ephemeral=True, allowed_mentions=discord.AllowedMentions.none())
 
 @C.client.tree.command(name="flight_log", description="Send a Flight-log after the flight.")
-@app_commands.describe(flight_code="Select Flight Code", fc="Flight Crew Status", cc="Cabin Crew Status", gc="Ground Crew Status", bus="Bus Driver Status (only for flights using the bus service)")
+@app_commands.describe(flight_code="Select Flight Code", fc="Flight Crew Status", cc="Cabin Crew Status", gc="Ground Crew Status")
 @app_commands.choices(
     fc=[app_commands.Choice(name="Perfect (Check)", value=1), app_commands.Choice(name="Issues (X)", value=0)],
     cc=[app_commands.Choice(name="Perfect (Check)", value=1), app_commands.Choice(name="Issues (X)", value=0)],
-    gc=[app_commands.Choice(name="Perfect (Check)", value=1), app_commands.Choice(name="Issues (X)", value=0)],
-    bus=[app_commands.Choice(name="Perfect (Check)", value=1), app_commands.Choice(name="Issues (X)", value=0)]
+    gc=[app_commands.Choice(name="Perfect (Check)", value=1), app_commands.Choice(name="Issues (X)", value=0)]
 )
 @app_commands.autocomplete(flight_code=C.log_flight_autocomplete)
 @C.event_manager_only
-async def flight_log_cmd(interaction: discord.Interaction, flight_code: str, fc: int = None, cc: int = None, gc: int = None, bus: int = None):
+async def flight_log_cmd(interaction: discord.Interaction, flight_code: str, fc: int = None, cc: int = None, gc: int = None):
     if not C.is_event_manager_or_chief(interaction.user) and not (C.TEST_MODE and C._test_admin_allowed(interaction.user)):
         return await interaction.response.send_message(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'No permission.')]))
 
@@ -1396,23 +1390,12 @@ async def flight_log_cmd(interaction: discord.Interaction, flight_code: str, fc:
     if flight.get("flight_log_sent"):
         return await interaction.response.send_message(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'Flight-log has already been sent for this flight.')]))
 
-    is_pure_bus = flight.get("is_bus")
-    has_bus_service = flight.get("use_bus")
-
-
-    if not is_pure_bus and (fc is None or cc is None):
+    if fc is None or cc is None:
         return await interaction.response.send_message(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'Ratings for `fc` and `cc` are required.')]))
     if gc is None:
         return await interaction.response.send_message(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'A rating for `gc` is required.')]))
-    if (is_pure_bus or has_bus_service) and bus is None:
-        return await interaction.response.send_message(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'This flight uses a bus, so please also enter a `bus` rating.')]))
 
-    uses_bus = bool(is_pure_bus or has_bus_service)
-    if bus is not None and not uses_bus:
-
-        bus = None
-
-    checks = {"fc": bool(fc) if fc is not None else False, "cc": bool(cc) if cc is not None else False, "gc": bool(gc), "bus": bool(bus) if bus is not None else None}
+    checks = {"fc": bool(fc), "cc": bool(cc), "gc": bool(gc)}
     
 
     view = C.FlightLogAbsentView(flight, checks)
@@ -1455,8 +1438,7 @@ async def editflightlog_cmd(interaction: discord.Interaction, message_id: str):
         "First Class": "First Class", "Business Class": "Business Class",
         "Premium Economy": "Premium Economy", "Economy Class": "Economy Class",
         "MR": "GC Supervisor(MR)", "GC Supervisor(MR)": "GC Supervisor(MR)",
-        "Crew": "Ground Crew", "Ground Crew": "Ground Crew",
-        "Bus Driver": "Bus Driver", "Dispatcher": "Dispatcher"
+        "Crew": "Ground Crew", "Ground Crew": "Ground Crew"
     }
 
     content_to_parse = target_msg.content
@@ -1712,9 +1694,6 @@ class LogAssignmentView(discord.ui.View):
         content += f"**Cabin Crew Department**\n> First Class: {g('First Class', 'Not assigned')}\n> Business Class: {g('Business Class', 'Not assigned')}\n> Premium Economy: {g('Premium Economy', 'Not assigned')}\n> Economy Class: {g('Economy Class', 'Not assigned')}\n\n"
         content += f"**Ground Crew Department**\n> MR: {g('GC Supervisor(MR)')}\n> Crew: {g('Ground Crew')}\n"
         
-        if self.assignments.get('Bus Driver') or self.assignments.get('Dispatcher'):
-            content += f"\n**Bus Driver Department**\n> Dispatcher: {g('Dispatcher')}\n> Bus Driver: {g('Bus Driver')}\n"
-
         if bottom_text:
             content += bottom_text
 
@@ -1988,7 +1967,6 @@ async def backupflight_cmd(interaction: discord.Interaction, flight_code: str):
     image_url, image_bytes = await C.fetch_fresh_image_info(flight.get("source_channel_id"), flight.get("source_message_id"))
 
 
-    is_bus = flight.get("is_bus", False)
     airline = flight.get("airline", "Airline")
     origin = flight.get("origin", "Unknown")
     dest = flight.get("destination", "Unknown")
@@ -1996,12 +1974,8 @@ async def backupflight_cmd(interaction: discord.Interaction, flight_code: str):
     classes = flight.get("classes", "Unknown")
     host_id = flight.get("host_id")
 
-    if is_bus:
-        event_name = flight.get("event_title") or flight_code
-        desc = f"`Host` <@{host_id}>\n`Server` {origin}\n> Information\n`Operator` {airline}\n`Vehicle` {equipment}"
-    else:
-        event_name = flight.get("event_title") or f"{flight_code} {origin}→{dest}"
-        desc = f"`Host` <@{host_id}>\n`Origin` {origin}\n`Destination` {dest}\n> Information\n`Airline` {airline}\n`Aircraft` {equipment}\n`Classes` {classes}"
+    event_name = flight.get("event_title") or f"{flight_code} {origin}→{dest}"
+    desc = f"`Host` <@{host_id}>\n`Origin` {origin}\n`Destination` {dest}\n> Information\n`Airline` {airline}\n`Aircraft` {equipment}\n`Classes` {classes}"
 
 
     pass_dt = datetime.datetime.fromtimestamp(flight["start_timestamp"], tz=datetime.timezone.utc)
@@ -2064,146 +2038,6 @@ async def restart_cmd(interaction: discord.Interaction):
     
 
     os.execv(sys.executable, ['python'] + sys.argv)
-
-@C.client.tree.command(name="create_bus", description="Create a bus operation event.")
-@app_commands.describe(
-    template_name="Template name (e.g. City Bus Service)",
-    title="Event title (e.g. City Bus Service)",
-    staff_meet_datetime="Staff Meet Time (YYYY-MM-DD HH:MM)",
-    start_time="Start Time (HH:MM)",
-    host_timezone="Timezone"
-)
-@app_commands.autocomplete(template_name=C.bus_template_autocomplete)
-@C.event_manager_only
-async def create_bus_slash(interaction: discord.Interaction, template_name: str, title: str,
-                           staff_meet_datetime: str, start_time: str, host_timezone: str = "GMT+9"):
-    if interaction.guild_id != C.STAFF_GUILD_ID or not C.is_event_manager_or_chief(interaction.user):
-        return await interaction.response.send_message(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'No permission.')]))
-    await interaction.response.defer(ephemeral=True)
-
-
-    if " | " in template_name:
-        template_name = template_name.split(" | ")[0].strip()
-
-    await C.ensure_templates_fresh()
-    saved_route = C.FLIGHT_DB.get(template_name)
-    if not saved_route:
-        return await interaction.followup.send(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'Template not found. Please check the Flight Information channel.')]))
-
-
-    variants = saved_route.get("variants", {})
-    if not variants:
-        return await interaction.followup.send(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'The template does not contain any information.')]))
-    
-    first_equip_name = list(variants.keys())[0]
-    variant_data = variants[first_equip_name]
-
-    src_ch = variant_data.get("source_channel_id")
-    src_msg = variant_data.get("source_message_id")
-    image_url, image_bytes = await C.fetch_fresh_image_info(src_ch, src_msg)
-
-    data = {
-        "flight_code": template_name.strip(), 
-        "origin": saved_route["origin"],
-        "destination": "",
-        "equipment": "Bus",
-        "classes": "",
-        "roblox_link": variant_data.get("roblox_link", ""),
-        "airline": variant_data.get("airline", "Airline"),
-        "color": variant_data.get("color", "74BCF6"),
-        "source_channel_id": src_ch, "source_message_id": src_msg,
-        "staff_meet_datetime_str": staff_meet_datetime, 
-        "passenger_time_str": start_time,
-        "host_timezone_str": host_timezone,
-        "mention_str": f"<@&{C.NOTIFICATION_ROLE_ID}>",
-        "is_custom": False,
-        "use_bus": True,
-        "event_title": title
-    }
-
-
-    success, result_msg = await C.process_flight_creation(interaction.user, data, image_bytes, image_url, is_bus=True)
-    if success:
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Bus Event Created', result_msg, discord.Color.green()), content=None), ephemeral=True)
-    else:
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Error', result_msg, discord.Color.red()), content=None), ephemeral=True)
-
-@C.client.tree.command(name="create_custom_bus", description="Create fully customized bus operation events without using templates.")
-@app_commands.describe(
-    title="Event title (e.g. City Bus Service)",
-    vehicle="Vehicle (e.g. Isuzu Gala)",
-    server_name="Server name (e.g. City Line)",
-    roblox_link="Game Link",
-    color="Hex color (e.g. 74BCF6)",
-    staff_meet_datetime="Staff Meet Time (YYYY-MM-DD HH:MM)",
-    start_time="Start Time (HH:MM)",
-    host_timezone="Timezone (e.g., GMT+9)",
-    image="Upload bus image",
-    mention_role_1="[Optional] Notification role 1",
-    mention_role_2="[Optional] Notification role 2",
-    mention_all="[Optional] @everyone etc."
-)
-@app_commands.autocomplete(mention_role_1=C.customer_role_autocomplete, mention_role_2=C.customer_role_autocomplete)
-@app_commands.choices(mention_all=[
-    app_commands.Choice(name="None", value="none"),
-    app_commands.Choice(name="@here", value="@here")
-])
-@C.event_manager_only
-async def create_custom_bus_slash(
-        interaction: discord.Interaction, title: str, vehicle: str, server_name: str,
-        roblox_link: str, color: str, staff_meet_datetime: str, start_time: str,
-        image: discord.Attachment, host_timezone: str = "GMT+9",
-        mention_role_1: str = None, mention_role_2: str = None, mention_all: str = "none"
-):
-    if interaction.guild_id != C.STAFF_GUILD_ID or not C.is_event_manager_or_chief(interaction.user):
-        return await interaction.response.send_message(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'No permission.')]))
-    await interaction.response.defer(ephemeral=True)
-
-    log_channel = C.client.get_channel(C.FLIGHT_INPUT_CHANNEL_ID)
-    if not log_channel:
-        return await interaction.followup.send(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'Error: Channel not found.')]))
-
-
-    saved_msg = await log_channel.send(content=f"Custom Bus Created: `{title}`", file=await image.to_file())
-    image_bytes = await image.read()
-
-    mentions_list = []
-    if mention_all != "none":
-        mentions_list.append(mention_all)
-    if mention_role_1:
-        mentions_list.append(f"<@&{mention_role_1}>")
-    if mention_role_2:
-        mentions_list.append(f"<@&{mention_role_2}>")
-
-    if not mentions_list:
-        mentions_list.append(f"<@&{C.NOTIFICATION_ROLE_ID}>")
-
-    data = {
-        "flight_code": title.strip(),
-        "origin": server_name,
-        "destination": "",
-        "equipment": vehicle,
-        "classes": "",
-        "roblox_link": roblox_link,
-        "airline": "Airline", 
-        "color": color.replace("#", ""),
-        "source_channel_id": saved_msg.channel.id, 
-        "source_message_id": saved_msg.id,
-        "staff_meet_datetime_str": staff_meet_datetime, 
-        "passenger_time_str": start_time,
-        "host_timezone_str": host_timezone,
-        "event_title": title,
-        "mention_str": " ".join(mentions_list),
-        "is_custom": True,
-        "use_bus": True
-    }
-
-
-    success, result_msg = await C.process_flight_creation(interaction.user, data, image_bytes, saved_msg.attachments[0].url, is_bus=True)
-    if success:
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Custom Bus Created Successfully', result_msg, discord.Color.green()), content=None), ephemeral=True)
-    else:
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Creation Error', result_msg, discord.Color.red()), content=None), ephemeral=True)
 
 @C.client.tree.command(name="manual_assign", description="[Admin] Manually change a staff member's attending/not-attending status.")
 @app_commands.describe(
@@ -2435,7 +2269,7 @@ async def duplicate_flight_cmd(interaction: discord.Interaction, source_flight_c
     image_url, image_bytes = await C.fetch_fresh_image_info(source.get("source_channel_id"), source.get("source_message_id"))
     
 
-    success, result_msg = await C.process_flight_creation(interaction.user, new_data, image_bytes, image_url, is_bus=source.get("is_bus", False))
+    success, result_msg = await C.process_flight_creation(interaction.user, new_data, image_bytes, image_url)
     if success:
         await interaction.followup.send(ephemeral=True, view=C.build_v2_card('Notice', [(None, f'Copied the information for **{source_flight_code}** and created a new flight!')]))
     else:
@@ -2477,8 +2311,7 @@ async def manual_log_cmd(interaction: discord.Interaction, message_id: str = Non
         "First Class": "First Class", "Business Class": "Business Class",
         "Premium Economy": "Premium Economy", "Economy Class": "Economy Class",
         "MR": "GC Supervisor(MR)", "GC Supervisor(MR)": "GC Supervisor(MR)",
-        "Crew": "Ground Crew", "Ground Crew": "Ground Crew",
-        "Bus Driver": "Bus Driver", "Dispatcher": "Dispatcher"
+        "Crew": "Ground Crew", "Ground Crew": "Ground Crew"
     }
 
     content_to_parse = target_msg.content
@@ -2560,8 +2393,7 @@ async def flight_backup_cmd(interaction: discord.Interaction, flight_code: str):
 @app_commands.choices(needed_role=[
     app_commands.Choice(name="Flight Operations", value=str(C.ROLE_FLIGHT_OPS)),
     app_commands.Choice(name="Cabin Crews", value=str(C.ROLE_CABIN_CREWS)),
-    app_commands.Choice(name="Ground Operations", value=str(C.ROLE_GROUND_OPS)),
-    app_commands.Choice(name="Bus Driver", value=str(C.ROLE_BUS_DRIVER_1))
+    app_commands.Choice(name="Ground Operations", value=str(C.ROLE_GROUND_OPS))
 ])
 @C.event_manager_only
 async def request_staff_cmd(interaction: discord.Interaction, flight_code: str, needed_role: str, message: str = None):
@@ -2578,8 +2410,6 @@ async def request_staff_cmd(interaction: discord.Interaction, flight_code: str, 
 
 
     role_mention = f"<@&{needed_role}>"
-    if needed_role == str(C.ROLE_BUS_DRIVER_1):
-        role_mention = f"<@&{C.ROLE_BUS_DRIVER_1}>"
 
 
     route_text = f"{flight.get('origin')}"
@@ -2610,7 +2440,7 @@ async def request_staff_cmd(interaction: discord.Interaction, flight_code: str, 
     else:
         await interaction.followup.send(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'Staff channel not found. / Staff channel not found.')]))
 
-@C.client.tree.command(name="manage_templates", description="[Admin] View and delete registered flight/bus templates.")
+@C.client.tree.command(name="manage_templates", description="[Admin] View and delete registered flight templates.")
 @app_commands.describe(template_name="Template to manage (flight code or service name)")
 @app_commands.autocomplete(template_name=C.all_template_autocomplete)
 @C.event_manager_only

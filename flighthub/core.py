@@ -171,9 +171,6 @@ ROLE_GROUND_OPS = cfg("roles.ground_ops")
 ROLE_CABIN_CREWS = cfg("roles.cabin_crew")
 ROLE_FLIGHT_OPS = cfg("roles.flight_ops")
 
-ROLE_BUS_DRIVER_1 = cfg("roles.bus_driver")
-ROLE_BUS_DRIVERS = (ROLE_BUS_DRIVER_1,)
-ROLE_DISPATCHER = cfg("roles.dispatcher")
 EXCLUDE_REMIND_ROLE_ID = cfg("roles.exclude_remind")
 EXCLUDE_REMIND_ROLE_ID_2 = cfg("roles.exclude_remind_2")
 EXCLUDE_REMIND_ROLE_IDS = (EXCLUDE_REMIND_ROLE_ID, EXCLUDE_REMIND_ROLE_ID_2)
@@ -202,7 +199,7 @@ BRAND_AIRLINE = cfg("brand.airline", "Airline")
 
 SIGNUP_TYPE_ICON = cfg("emojis.signup_type", {
     "flight":    "\u2708\ufe0f",  # airplane
-    "bus":       "\U0001f68c",    # bus
+    "custom":    "\U0001f6e0\ufe0f",  # hammer and wrench
     "test":      "\U0001f9ea",    # test tube
     "recurring": "\U0001f501",    # repeat
     "private":   "\U0001f512",    # lock
@@ -214,8 +211,8 @@ def signup_icon(flight: dict) -> str:
     flight = flight or {}
     if flight.get("is_gamenight"):
         key = "gamenight"
-    elif flight.get("is_bus"):
-        key = "bus"
+    elif flight.get("is_custom"):
+        key = "custom"
     elif flight.get("is_test"):
         key = "test"
     elif flight.get("is_private"):
@@ -234,13 +231,8 @@ def signup_footer(flight_code, host_display) -> str:
     return f"Flight Code: {flight_code} | Created by {host_display}"
 
 
-def minimum_staff_text(*, is_bus: bool = False, use_bus: bool = False) -> str:
-    if is_bus:
-        return "Bus Driver - 2\nDispatcher - 2"
-    text = "Captain - 1\nFirst Officer - 1\nCabin Crew - 2\nGround Crew - 1"
-    if use_bus:
-        text += "\nBus Driver - 2"
-    return text
+def minimum_staff_text() -> str:
+    return "Captain - 1\nFirst Officer - 1\nCabin Crew - 2\nGround Crew - 1"
 
 
 
@@ -457,8 +449,6 @@ COMMAND_PERMISSIONS = {
     "/create_custom_flight": PERM_EVENT_MANAGER,
     "/create_private_flight": PERM_EVENT_MANAGER,
     "/create_private_flight_template": PERM_EVENT_MANAGER,
-    "/create_bus": PERM_EVENT_MANAGER,
-    "/create_custom_bus": PERM_EVENT_MANAGER,
     "/recurring_flight": PERM_EVENT_MANAGER,
     "/recurring_flighttest": PERM_EVENT_MANAGER,
     "/duplicate_flight": PERM_EVENT_MANAGER,
@@ -738,9 +728,7 @@ POSITIONS_DATA = [
     ("Premium Economy", "Requires Cabin Crews role", ROLE_CABIN_CREWS),
     ("Economy Class", "Requires Cabin Crews role", ROLE_CABIN_CREWS),
     ("GC Supervisor(MR)", "Requires Ground Operations role", ROLE_GROUND_OPS),
-    ("Ground Crew", "Requires Ground Operations role", ROLE_GROUND_OPS),
-    ("Bus Driver", "Requires Bus Driver role", ROLE_BUS_DRIVERS),
-    ("Dispatcher", "Requires Dispatcher role", ROLE_DISPATCHER)
+    ("Ground Crew", "Requires Ground Operations role", ROLE_GROUND_OPS)
 ]
 
 
@@ -1632,10 +1620,10 @@ def build_google_calendar_url(flight: dict, start_ts=None, end_ts=None) -> str:
         if end <= start:
             end = start + 3600
         fmt = lambda ts: datetime.datetime.fromtimestamp(ts, tz=datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        code = str(flight.get("flight_code", "Flight")).replace("Bus (", "").replace(")", "").strip()
+        code = str(flight.get("flight_code", "Flight")).strip()
         origin = flight.get("origin") or ""
         destination = flight.get("destination") or ""
-        title = code if flight.get("is_bus") else f"{code} {origin}→{destination}".strip()
+        title = f"{code} {origin}→{destination}".strip()
         details = ["Flight Hub"]
         if flight.get("event_url"):
             details.append(f"Discord event: {flight['event_url']}")
@@ -1690,8 +1678,6 @@ def generate_schedule_embed(active_flights, is_staff=False):
             flight_code = f["flight_code"]
 
             display_flight_code = flight_code
-            if f.get("is_bus") and flight_code.startswith("Bus (") and flight_code.endswith(")"):
-                display_flight_code = flight_code[5:-1]
 
             origin = f.get("origin", "???")
             destination = f.get("destination", "???")
@@ -1708,21 +1694,14 @@ def generate_schedule_embed(active_flights, is_staff=False):
                 else:
                     fc_display = f"**{display_flight_code}**"
                 
-                if f.get("is_bus"):
-                    description += f"{EMOJI_BAGGAGE_STR} {fc_display} `{airline}`\n"
-                    description += f"  Route: {origin}\n"
-                else:
-                    description += f"{fc_display} `{airline}`\n"
-                    description += f"  {origin} ➝ {destination}\n"
+                description += f"{fc_display} `{airline}`\n"
+                description += f"  {origin} ➝ {destination}\n"
                 
                 description += f"  <t:{start_ts}:t> – <t:{end_ts}:t>\n"
                 description += f"  {aircraft}\n"
             else:
                 description += f"{EMOJI_BAGGAGE_STR} **{display_flight_code}** `{airline}`\n"
-                if f.get("is_bus"):
-                    description += f"  Route: {origin}\n"
-                else:
-                    description += f"  {origin} ➝ {destination}\n"
+                description += f"  {origin} ➝ {destination}\n"
                 
                 description += f"  <t:{start_ts}:t> – <t:{end_ts}:t>\n"
                 description += f"  {aircraft}\n"
@@ -2150,7 +2129,6 @@ def migrate_flight_record(f) -> bool:
         changed = True
 
 
-    setdef("use_bus", False)
     setdef("is_private", False)
     setdef("no_mention", False)
 
@@ -2693,8 +2671,7 @@ async def update_db_cache(strict=False):
             key_map = {"Origin": "origin", "Destination": "destination",
                        "Aircraft": "equipment", "Class": "classes",
                        "Airport": "roblox_link", "Airline": "airline",
-                       "Color": "color",
-                       "Server": "origin", "Bus": "equipment"}
+                       "Color": "color"}
             
             flight_code = None
 
@@ -2716,7 +2693,7 @@ async def update_db_cache(strict=False):
                         data[key_map[key]] = val
                 else:
 
-                    if not flight_code and (re.match(r'^[A-Za-z]{2,3}\d+$', line) or "Transport" in line or "Bus" in line):
+                    if not flight_code and re.match(r'^[A-Za-z]{2,3}\d+$', line):
                         flight_code = line
 
             if flight_code and "equipment" in data:
@@ -2744,7 +2721,6 @@ async def update_db_cache(strict=False):
 
 
         for _code, _info in temp_db.items():
-            _is_bus_t = ("Transport" in _code) or ("Bus" in _code)
             _cur = ((_info.get("origin") or "").strip().lower(), (_info.get("destination") or "").strip().lower())
             for _eq in list(_info["variants"].keys()):
                 _v = _info["variants"][_eq]
@@ -2752,7 +2728,7 @@ async def update_db_cache(strict=False):
                 _vd = (_v.get("destination") or "").strip().lower()
 
                 _stale = bool(_vo) and _vo != _cur[0]
-                if not _is_bus_t and _vd and _vd != _cur[1]:
+                if _vd and _vd != _cur[1]:
                     _stale = True
                 if _stale and len(_info["variants"]) > 1:
                     print(f"[template] {_code}: '{_eq}' was registered for {_v.get('origin')}->{_v.get('destination')} "
@@ -2762,12 +2738,7 @@ async def update_db_cache(strict=False):
         autocomplete_list = []
         for code, info in temp_db.items():
             equip_str = ", ".join(list(info["variants"].keys()))
-            
-
-            if "Transport" in code or "Bus" in code:
-                label = f"{code} | Server: {info['origin']}"
-            else:
-                label = f"{code} | {info['origin']} ➝ {info['destination']}"
+            label = f"{code} | {info['origin']} ➝ {info['destination']}"
                 
             autocomplete_list.append({
                 "label": label[:100],
@@ -3053,19 +3024,15 @@ class DeleteReasonModal(discord.ui.Modal, title="Reason for Deletion"):
         await interaction.followup.send(ephemeral=True, view=build_v2_card('Notice', [(None, 'Cancellation announced and data removed.')]))
 
 def build_edit_flight_embed(flight, flight_code, image_url=None):
-    is_bus = flight.get("is_bus", False)
-
-    title = flight.get("event_title") or (flight_code if is_bus else f"{flight_code} {flight.get('origin','?')}→{flight.get('destination','?')}")
-    route_val = flight.get('origin', 'Unknown') if is_bus else f"{flight.get('origin','Unknown')} ➝ {flight.get('destination','Unknown')}"
-    equip_label = "Vehicle" if is_bus else "Aircraft Equipment"
+    title = flight.get("event_title") or f"{flight_code} {flight.get('origin','?')}→{flight.get('destination','?')}"
+    route_val = f"{flight.get('origin','Unknown')} ➝ {flight.get('destination','Unknown')}"
 
     embed = discord.Embed(title="What would you like to change?", color=get_embed_color(flight.get('color')))
 
     embed.add_field(name="1 · Title", value=f"```{title}```", inline=False)
-    embed.add_field(name=f"2 · {'Route / Server' if is_bus else 'Route'}", value=f"```{route_val}```", inline=False)
-    embed.add_field(name=f"3 · {equip_label}", value=f"```{flight.get('equipment', 'Unknown')}```", inline=False)
-    if not is_bus:
-        embed.add_field(name="4 · Aircraft Operator", value=f"```{flight.get("airline") or default_airline()}```", inline=False)
+    embed.add_field(name="2 · Route", value=f"```{route_val}```", inline=False)
+    embed.add_field(name="3 · Aircraft Equipment", value=f"```{flight.get('equipment', 'Unknown')}```", inline=False)
+    embed.add_field(name="4 · Aircraft Operator", value=f"```{flight.get("airline") or default_airline()}```", inline=False)
 
     staff_ts = int(flight.get('staff_timestamp', 0))
     start_ts = int(flight.get('start_timestamp', 0))
@@ -3073,11 +3040,7 @@ def build_edit_flight_embed(flight, flight_code, image_url=None):
     embed.add_field(name="6 · Departure Time", value=f"<t:{start_ts}:F>\n```{datetime.datetime.fromtimestamp(start_ts, tz=JST).strftime('%Y-%m-%d %H:%M')}```", inline=True)
     embed.add_field(name="\u200b", value="\u200b", inline=True)
 
-    if not is_bus:
-        use_bus_val = "Yes" if flight.get("use_bus") else "No"
-        embed.add_field(name="7 · Use Bus Service", value=f"```{use_bus_val}```", inline=True)
-
-    embed.add_field(name="8 · Image", value="```Auto-generated from the flight template.```", inline=False)
+    embed.add_field(name="7 · Image", value="```Auto-generated from the flight template.```", inline=False)
 
     if event_url := flight.get("event_url"):
         embed.add_field(name="Calendar Event", value=f"[Open in Discord]({event_url})\n```{event_url}```", inline=False)
@@ -3096,20 +3059,16 @@ class EditFieldSelect(discord.ui.Select):
         self.flight = flight
         self.flight_code = flight_code
         self.is_urgent = is_urgent
-        is_bus = flight.get("is_bus", False)
 
         options = [
             discord.SelectOption(label="1 · Title", value="title"),
-            discord.SelectOption(label="2 · Route" + (" / Server" if is_bus else ""), value="route"),
-            discord.SelectOption(label=f"3 · {'Vehicle' if is_bus else 'Aircraft Equipment'}", value="equipment"),
+            discord.SelectOption(label="2 · Route", value="route"),
+            discord.SelectOption(label="3 · Aircraft Equipment", value="equipment"),
+            discord.SelectOption(label="4 · Aircraft Operator", value="operator"),
+            discord.SelectOption(label="5 · Staff Briefing Time", value="staff_time"),
+            discord.SelectOption(label="6 · Departure Time", value="departure_time"),
+            discord.SelectOption(label="7 · Image", value="image"),
         ]
-        if not is_bus:
-            options.append(discord.SelectOption(label="4 · Aircraft Operator", value="operator"))
-        options.append(discord.SelectOption(label="5 · Staff Briefing Time", value="staff_time"))
-        options.append(discord.SelectOption(label="6 · Departure Time", value="departure_time"))
-        if not is_bus:
-            options.append(discord.SelectOption(label="7 · Use Bus Service", value="use_bus"))
-        options.append(discord.SelectOption(label="8 · Image", value="image"))
 
         super().__init__(placeholder="Select what to edit...", min_values=1, max_values=1, options=options, custom_id="edit_field_select")
 
@@ -3146,37 +3105,6 @@ class EditFieldSelect(discord.ui.Select):
             )
 
 
-        if choice == "use_bus":
-            global global_db_dirty
-            new_val = not self.flight.get("use_bus", False)
-            async with global_json_lock:
-                target_idx = next((i for i, f in enumerate(FLIGHT_LOG_CACHE) if f["flight_code"] == self.flight_code), -1)
-                if target_idx == -1:
-                    return await interaction.response.send_message(ephemeral=True, view=build_v2_card('Notice', [(None, EMOJI_X_STR + ' Error: Flight not found.')]))
-                FLIGHT_LOG_CACHE[target_idx]["use_bus"] = new_val
-                self.flight["use_bus"] = new_val
-                global_db_dirty = True
-
-
-            try:
-                if s_channel := interaction.client.get_channel(self.flight.get("staff_channel_id")):
-                    msg = await s_channel.fetch_message(self.flight["staff_message_id"])
-                    embed = msg.embeds[0]
-                    for i, f in enumerate(embed.fields):
-                        if f.name == "Minimum Staff Needed":
-                            min_staff = "Captain - 1\nFirst Officer - 1\nCabin Crew - 2\nGround Crew - 1"
-                            if new_val:
-                                min_staff += "\nBus Driver - 2"
-                            embed.set_field_at(i, name="Minimum Staff Needed", value=min_staff, inline=False)
-                            break
-                    await msg.edit(embed=embed)
-            except Exception:
-                pass
-
-            image_url, _ = await fetch_fresh_image_info(self.flight.get("source_channel_id"), self.flight.get("source_message_id"))
-            await interaction.response.edit_message(embed=build_edit_flight_embed(self.flight, self.flight_code, image_url=image_url), view=self.view)
-
-
 class EditFlightOptionsView(discord.ui.View):
     def __init__(self, flight, flight_code, is_urgent=False):
         super().__init__(timeout=300)
@@ -3197,29 +3125,20 @@ class EditFlightOptionsView(discord.ui.View):
 
 
 
-def _is_bus_route_code(code: str) -> bool:
-    return "Transport" in code or "Bus" in code
-
-
 def resolve_template_code(flight: dict):
     rc = flight.get("route_code")
     if rc and rc in FLIGHT_DB:
         return rc
-    is_bus = bool(flight.get("is_bus"))
     code = (flight.get("flight_code") or "").strip()
     if code.startswith("[TEST] "):
         code = code[7:]
-    if code.startswith("Bus (") and code.endswith(")"):
-        code = code[5:-1]
     if flight.get("route_changed_at"):
 
         eq = (flight.get("equipment") or "").lower()
         for c, info in FLIGHT_DB.items():
-            if _is_bus_route_code(c) != is_bus:
-                continue
             if info.get("origin") != flight.get("origin"):
                 continue
-            if not is_bus and info.get("destination") != flight.get("destination"):
+            if info.get("destination") != flight.get("destination"):
                 continue
             if any(k.lower() == eq for k in info.get("variants", {})):
                 return c
@@ -3229,12 +3148,9 @@ def resolve_template_code(flight: dict):
 
 
 def compose_flight_code(flight: dict, route_code: str) -> str:
-    code = route_code
     if flight.get("is_test"):
-        code = f"[TEST] {code}"
-    if flight.get("is_bus"):
-        code = f"Bus ({code})"
-    return code
+        return f"[TEST] {route_code}"
+    return route_code
 
 
 
@@ -3251,32 +3167,31 @@ def find_current_route_code(flight: dict):
         return rc
     for c, info in FLIGHT_DB.items():
         if (info.get("origin") == flight.get("origin")
-                and (flight.get("is_bus") or info.get("destination") == flight.get("destination"))):
+                and info.get("destination") == flight.get("destination")):
             return c
     return None
 
 
 def list_routes_for_edit(flight: dict, used_origins: set) -> list:
-    is_bus = bool(flight.get("is_bus"))
     cur_origin = (flight.get("origin") or "").lower()
     skip_src = _custom_source_ids(flight.get("flight_code"))
     items = []
     for code, info in sorted(FLIGHT_DB.items()):
-        if _is_bus_route_code(code) != is_bus or not info.get("variants"):
+        if not info.get("variants"):
             continue
         if all(v.get("source_message_id") in skip_src for v in info["variants"].values()):
             continue
         origin = info.get("origin", "Unknown")
         if origin.lower() in used_origins and origin.lower() != cur_origin:
             continue
-        label = f"{code} | Server: {origin}" if is_bus else f"{code} | {origin} ➝ {info.get('destination', 'Unknown')}"
+        label = f"{code} | {origin} ➝ {info.get('destination', 'Unknown')}"
         items.append((code, label[:100]))
     return items
 
 
 def build_flight_event_name(flight: dict) -> str:
     code = flight["flight_code"]
-    name = flight.get("event_title") or (code if flight.get("is_bus") else f"{code} {flight.get('origin', '')}→{flight.get('destination', '')}")
+    name = flight.get("event_title") or f"{code} {flight.get('origin', '')}→{flight.get('destination', '')}"
     return f"[Private Flight] {name}" if flight.get("is_private") else name
 
 
@@ -3323,7 +3238,7 @@ def template_context(flight: dict, *, reason_text: str = "", updated: bool = Fal
         "Staff Join Time": f"<t:{staff_ts}:t>" if staff_ts else "",
         "Host": host_display_sync(host_id),
         "Host Mention": host_mention,
-        "Minimum Staff": minimum_staff_text(use_bus=flight.get("use_bus")),
+        "Minimum Staff": minimum_staff_text(),
         "Event Link": f"{EMOJI_LINK_STR} **[Discord Event Link]({flight.get('event_url', '')})**",
         "Mention": get_customer_mention_line(flight),
         "Updated": " (UPDATED)" if updated else "",
@@ -3339,14 +3254,13 @@ def render_staff_description(flight: dict, key: str = "staff_description") -> st
 
 def render_customer_post(flight: dict, *, key: str = None, reason_text: str = "", updated: bool = False) -> str:
     if key is None:
-        key = "customer_post_bus" if flight.get("is_bus") else "customer_post"
+        key = "customer_post"
     return templates.render(templates.get_template(key),
                             template_context(flight, reason_text=reason_text, updated=updated))
 
 
 def render_calendar_description(flight: dict) -> str:
-    key = "calendar_description_bus" if flight.get("is_bus") else "calendar_description"
-    return templates.render(templates.get_template(key), template_context(flight))
+    return templates.render(templates.get_template("calendar_description"), template_context(flight))
 
 
 def build_flight_event_description(flight: dict) -> str:
@@ -3436,15 +3350,13 @@ async def perform_route_change(flight_code: str, route_code: str, equipment: str
 
         old = {"origin": flight.get("origin"), "destination": flight.get("destination"),
                "equipment": flight.get("equipment"), "code": old_code}
-        is_bus = bool(flight.get("is_bus"))
         flight["flight_code"] = new_code
         flight["origin"] = new_origin
-        flight["destination"] = new_origin if is_bus else route.get("destination", "Unknown")
+        flight["destination"] = route.get("destination", "Unknown")
         flight["equipment"] = equipment
-        flight["classes"] = "" if is_bus else variant.get("classes", "Unknown")
+        flight["classes"] = variant.get("classes", "Unknown")
         flight["roblox_link"] = variant.get("roblox_link", "")
-        if not is_bus:
-            flight["airline"] = variant.get("airline") or default_airline()
+        flight["airline"] = variant.get("airline") or default_airline()
         flight["color"] = variant.get("color", "1B3444")
 
 
@@ -3489,10 +3401,9 @@ async def perform_route_change(flight_code: str, route_code: str, equipment: str
             embed.title = signup_embed_title(flight, event_name)
             embed.color = PRIVATE_FLIGHT_COLOR if flight.get("is_private") else get_embed_color(flight.get("color"))
             for i, f in enumerate(embed.fields):
-                if f.name in ("Route", "Route / Server"):
-                    val = flight["origin"] if is_bus else f"{flight['origin']} ➝ {flight.get('destination', '')}"
-                    embed.set_field_at(i, name=f.name, value=val, inline=False)
-                elif f.name in ("Aircraft Equipment", "Vehicle"):
+                if f.name == "Route":
+                    embed.set_field_at(i, name=f.name, value=f"{flight['origin']} ➝ {flight.get('destination', '')}", inline=False)
+                elif f.name == "Aircraft Equipment":
                     embed.set_field_at(i, name=f.name, value=flight["equipment"], inline=False)
                 elif f.name == "Aircraft Operator":
                     embed.set_field_at(i, name=f.name, value=flight.get("airline") or default_airline(), inline=False)
@@ -3557,8 +3468,7 @@ async def perform_route_change(flight_code: str, route_code: str, equipment: str
     if flight.get("briefing_thread_id"):
         try:
             th = client.get_channel(flight["briefing_thread_id"]) or await client.fetch_channel(flight["briefing_thread_id"])
-            if not is_bus:
-                await th.edit(name=f"{flight['flight_code']} {flight['origin']}→{flight.get('destination', '')}"[:100])
+            await th.edit(name=f"{flight['flight_code']} {flight['origin']}→{flight.get('destination', '')}"[:100])
             notice = discord.Embed(title="Route / equipment changed", color=get_embed_color(flight.get("color")))
             notice.add_field(name="Before", value=f"{old['code']}\n{old['origin']} ➝ {old['destination']}\n{old['equipment']}", inline=False)
             notice.add_field(name="After", value=f"{flight['flight_code']}\n{flight['origin']} ➝ {flight.get('destination', '')}\n{flight['equipment']}", inline=False)
@@ -3591,7 +3501,7 @@ async def perform_route_change(flight_code: str, route_code: str, equipment: str
             try:
                 _gid = STAFF_GUILD_ID if flight.get("is_test") else CUSTOMER_GUILD_ID
                 _core = new_code.replace("[TEST] ", "")
-                _title = _core if is_bus else f"{_core} {flight['origin']}→{flight.get('destination', '')}"
+                _title = f"{_core} {flight['origin']}→{flight.get('destination', '')}"
                 await update_discord_recurring_event(_gid, flight["master_event_id"], _title,
                                                      build_flight_event_description(flight), flight["origin"], image_bytes)
             except Exception as e:
@@ -3674,7 +3584,7 @@ class EditRouteChangeView(discord.ui.View):
                     if v.get("source_message_id") not in _skip_src][:25] if self.route_code else []
         if variants:
             eq_sel = discord.ui.Select(
-                placeholder="2. Select aircraft equipment" if not self.flight.get("is_bus") else "2. Select vehicle", row=1,
+                placeholder="2. Select aircraft equipment", row=1,
                 options=[discord.SelectOption(label=v[:100], value=v, default=(v == self.equip)) for v in variants])
         else:
             eq_sel = discord.ui.Select(placeholder="2. Select a route first", row=1, disabled=True,
@@ -3696,8 +3606,7 @@ class EditRouteChangeView(discord.ui.View):
 
     def make_embed(self) -> discord.Embed:
         f = self.flight
-        is_bus = bool(f.get("is_bus"))
-        cur_route = f.get("origin", "?") if is_bus else f"{f.get('origin', '?')} ➝ {f.get('destination', '?')}"
+        cur_route = f"{f.get('origin', '?')} ➝ {f.get('destination', '?')}"
         e = discord.Embed(title="Change route / equipment", color=get_embed_color(f.get("color")),
                           description="Select a registered **route** and its **equipment**, then press Confirm.\n"
                                       "Both a route and equipment must be selected.\n"
@@ -3706,7 +3615,7 @@ class EditRouteChangeView(discord.ui.View):
         e.add_field(name="Current", value=f"```{f.get('flight_code', '?')}\n{cur_route}\n{f.get('equipment', '?')}```", inline=False)
         if self.route_code:
             info = FLIGHT_DB.get(self.route_code, {})
-            new_route = info.get("origin", "?") if is_bus else f"{info.get('origin', '?')} ➝ {info.get('destination', '?')}"
+            new_route = f"{info.get('origin', '?')} ➝ {info.get('destination', '?')}"
             e.add_field(name="New", value=f"```{compose_flight_code(f, self.route_code)}\n{new_route}\n{self.equip or '(select equipment)'}```", inline=False)
         if self.is_urgent:
             e.set_footer(text="Departure is within 3 hours: a reason is required and will be announced to customers.")
@@ -3865,8 +3774,6 @@ class EditFlightModal(discord.ui.Modal, title="Edit Flight Details"):
             dest = flight.get("destination", "Unknown")
             equipment = flight.get("equipment", "Unknown")
             classes = flight.get("classes", "Unknown")
-            is_bus = flight.get("is_bus", False)
-
 
 
             if flight.get("event_url"):
@@ -3901,35 +3808,21 @@ class EditFlightModal(discord.ui.Modal, title="Edit Flight Details"):
                         c_msg = await c_channel.fetch_message(flight["customer_message_id"])
                         reason_text = f"\n\n**Reason for Update**\n{self.reason.value}" if self.is_urgent and hasattr(self, 'reason') else ""
                         
-                        if is_bus:
-                            new_content = (
-                                f"{EMOJI_TAIL_STR} **Operation Information** (UPDATED)\n"
-                                f"Operation name: {flight['flight_code']}\n"
-                                f"Operator: {airline}\n"
-                                f"Server: {origin}\n"
-                                f"Date: <t:{int(pass_dt.timestamp())}:D>\n"
-                                f"Check-in Time: <t:{int(pass_dt.timestamp())}:t>\n"
-                                f"Vehicle: {equipment}\n"
-                                f"{reason_text}\n\n"
-                                f"{mention_line}"
-                                f"{EMOJI_LINK_STR} **[Discord Event Link]({flight['event_url']})**"
-                            )
-                        else:
-                            new_content = (
-                                f"{EMOJI_TAIL_STR} **Flight Information** (UPDATED)\n"
-                                f"Flight code: {flight['flight_code']}\n"
-                                f"Airline: {airline}\n"
-                                f"Departure Airport: {origin}\n"
-                                f"Arrival Airport: {dest}\n"
-                                f"Date: <t:{int(pass_dt.timestamp())}:D>\n"
-                                f"Check-in Time: <t:{int(pass_dt.timestamp())}:t>\n"
-                                f"Server Lock: <t:{int(lock_dt.timestamp())}:t>\n"
-                                f"Equipment: {equipment}\n"
-                                f"Class: {classes}\n"
-                                f"{reason_text}\n\n"
-                                f"{mention_line}"
-                                f"{EMOJI_LINK_STR} **[Discord Event Link]({flight['event_url']})**"
-                            )
+                        new_content = (
+                            f"{EMOJI_TAIL_STR} **Flight Information** (UPDATED)\n"
+                            f"Flight code: {flight['flight_code']}\n"
+                            f"Airline: {airline}\n"
+                            f"Departure Airport: {origin}\n"
+                            f"Arrival Airport: {dest}\n"
+                            f"Date: <t:{int(pass_dt.timestamp())}:D>\n"
+                            f"Check-in Time: <t:{int(pass_dt.timestamp())}:t>\n"
+                            f"Server Lock: <t:{int(lock_dt.timestamp())}:t>\n"
+                            f"Equipment: {equipment}\n"
+                            f"Class: {classes}\n"
+                            f"{reason_text}\n\n"
+                            f"{mention_line}"
+                            f"{EMOJI_LINK_STR} **[Discord Event Link]({flight['event_url']})**"
+                        )
                         await c_msg.edit(content=new_content, suppress=True)
                     except: pass
 
@@ -4034,23 +3927,6 @@ class ShiftRequestView(discord.ui.View):
             content=EMOJI_CHECK_STR + " Joined without preference.", 
             view=None
         )
-
-class BusDriverWarningView(discord.ui.View):
-    def __init__(self, staff_message):
-        super().__init__(timeout=300)
-        self.staff_message = staff_message
-
-    @discord.ui.button(label="Join anyway", style=discord.ButtonStyle.danger)
-    async def join_anyway(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await FlightSignupView().handle_action(interaction, "accept", staff_message=self.staff_message, skip_bus_warning=True)
-        try:
-            await interaction.edit_original_response(content=f"{EMOJI_CHECK_STR} You have joined.", embed=None, view=None)
-        except Exception:
-            pass
-
-    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
-    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.edit_message(content="Cancelled.", embed=None, view=None)
 
 
 async def set_member_attendance(flight: dict, uid: int, status: str):
@@ -4164,7 +4040,7 @@ class FlightSignupView(discord.ui.View):
                 return match.group(1).strip()
         return None
 
-    async def handle_action(self, interaction: discord.Interaction, action: str, staff_message=None, skip_bus_warning=False):
+    async def handle_action(self, interaction: discord.Interaction, action: str, staff_message=None):
         global global_db_dirty
         staff_message = staff_message or interaction.message
         flight_code = await self.get_flight_code(interaction)
@@ -4207,37 +4083,14 @@ class FlightSignupView(discord.ui.View):
                 return 
 
 
-        if action == "accept" and not skip_bus_warning and user_id not in flight.get("accepted_users", []):
-            _ids = {r.id for r in interaction.user.roles}
-            _only_bus = (any(r in _ids for r in ROLE_BUS_DRIVERS)
-                         and not any(r in _ids for r in (ROLE_FLIGHT_OPS, ROLE_CABIN_CREWS, ROLE_GROUND_OPS, ROLE_EVENT_MANAGERS)))
-            if _only_bus and not flight.get("is_bus") and not flight.get("use_bus"):
-                warn = discord.Embed(
-                    title=f"{EMOJI_NOTI_STR} Bus Driver is not needed",
-                    description=("This flight does not need a **Bus Driver**.\n"
-                                 "Would you still like to join?\n\n"
-                                 "**This flight is not recruiting bus drivers.**\n"
-                                 "Do you still want to join?"),
-                    color=discord.Color.orange())
-                warn.set_footer(text=f"Flight Code: {flight_code} | Bus driver check")
-                return await interaction.response.send_message(
-                    embed=warn, view=BusDriverWarningView(staff_message), ephemeral=True)
-
-
         if action == "accept" and user_id not in flight.get("accepted_users", []):
             user_roles = [r.id for r in interaction.user.roles]
             departments = []
-            
-            is_bus = flight.get("is_bus", False)
-            use_bus = flight.get("use_bus", False)
             
             if ROLE_FLIGHT_OPS in user_roles: departments.append("Flight Ops")
             if ROLE_CABIN_CREWS in user_roles: departments.append("Cabin Crew")
             if ROLE_GROUND_OPS in user_roles: departments.append("Ground Ops")
             
-            if (is_bus or use_bus) and any(r_id in user_roles for r_id in ROLE_BUS_DRIVERS): 
-                departments.append("Bus Driver")
-
 
             if len(departments) > 1:
                 view = ShiftRequestView(flight, user_id, departments)
@@ -4496,7 +4349,6 @@ POSITION_TO_DEPT = {
     "Business Class": "Cabin Crew", "Premium Economy": "Cabin Crew", "Economy Class": "Cabin Crew",
     "Captain": "Flight Ops", "First Officer": "Flight Ops",
     "GC Supervisor(MR)": "Ground Ops", "Ground Crew": "Ground Ops",
-    "Bus Driver": "Bus Driver",
 }
 
 def describe_shift_pref(flight: dict, uid: int, pos_dept):
@@ -4539,17 +4391,6 @@ class PositionSelect(discord.ui.Select):
     def __init__(self, parent_view):
         options = []
         for pos, desc, req_role in POSITIONS_DATA:
-
-            if parent_view.flight.get("is_bus"):
-                if pos not in ["Host", "Co-host", "Bus Driver", "Dispatcher"]:
-                    continue
-            else:
-
-                if pos == "Dispatcher":
-                    continue
-                if pos == "Bus Driver" and not parent_view.flight.get("use_bus"):
-                    continue
-            
             val = parent_view.assignments.get(pos)
             if val == "DISABLED":
                 continue
@@ -4800,15 +4641,6 @@ class BriefingSetupView(discord.ui.View):
             return any(r.id == role_id for r in member.roles)
 
 
-        if flight.get("is_bus"):
-            n = 0
-            for m in members:
-                if has(m, ROLE_DISPATCHER) and self.assignments.get("Dispatcher") == "UNASSIGNED":
-                    n += self._put("Dispatcher", m.id)
-                elif has(m, ROLE_BUS_DRIVERS):
-                    n += self._put("Bus Driver", m.id)
-            return n
-
         placed = set()
         cabin_pool = []
         dual_ground = set()
@@ -4819,7 +4651,6 @@ class BriefingSetupView(discord.ui.View):
                 "Cabin Crew": has(m, ROLE_CABIN_CREWS),
                 "Ground Ops": has(m, ROLE_GROUND_OPS),
                 "Flight Ops": has(m, ROLE_FLIGHT_OPS),
-                "Bus Driver": has(m, ROLE_BUS_DRIVERS) and bool(flight.get("use_bus")),
             }
             pref = (flight.get("shift_requests") or {}).get(str(uid), {}).get("first")
 
@@ -4843,20 +4674,15 @@ class BriefingSetupView(discord.ui.View):
             if ground_first and self.assignments.get("Ground Crew") == "UNASSIGNED":
                 placed.add(uid) if self._put("Ground Crew", uid) else None
                 continue
-            if roles["Bus Driver"] and self.assignments.get("Bus Driver") == "UNASSIGNED":
-                placed.add(uid) if self._put("Bus Driver", uid) else None
-                continue
 
 
-            dept = pref if pref and roles.get(pref) else next((d for d in ("Cabin Crew", "Ground Ops", "Flight Ops", "Bus Driver") if roles[d]), None)
+            dept = pref if pref and roles.get(pref) else next((d for d in ("Cabin Crew", "Ground Ops", "Flight Ops") if roles[d]), None)
             if dept == "Cabin Crew":
                 cabin_pool.append(uid)
             elif dept == "Ground Ops":
                 placed.add(uid) if self._put("Ground Crew", uid) else None
             elif dept == "Flight Ops":
                 placed.add(uid) if self._put("First Officer", uid) else None
-            elif dept == "Bus Driver":
-                placed.add(uid) if self._put("Bus Driver", uid) else None
 
 
         if self.assignments.get("Ground Crew") == "UNASSIGNED" and dual_ground:
@@ -4878,8 +4704,6 @@ class BriefingSetupView(discord.ui.View):
     def ensure_minimum_coverage(self, guild=None) -> list:
         notes = []
         flight = self.flight
-        if flight.get("is_bus"):
-            return notes
         guild = guild or self.guild
         host_id = flight.get("host_id")
         accepted = [u for u in flight.get("accepted_users", []) if isinstance(u, int) and u != host_id]
@@ -5117,53 +4941,6 @@ class BriefingSetupView(discord.ui.View):
         cabin_str = "\n".join(
             f"> {c}: {disp(c)} " for c in CABIN_CLASS_ORDER if self.assignments.get(c) != "DISABLED")
 
-        bus_str = ""
-        if self.flight.get('use_bus'):
-            bus_str = f"\n**Bus Driver Department**\n> Bus Driver: {get_user('Bus Driver')}\n"
-
-        if self.flight.get("is_bus"):
-            if self.lang == "JP":
-                desc = f"""**Operation Information**
-> Join time: {join_time_str}
-> Start time: {st_boarding}
-> End time: <t:{int(self.flight['end_timestamp'])}:t>
-> Server: {self.flight['origin']}
-> Vehicle: {self.flight['equipment']}
-
-**Operation Management**
-> Host: {get_user('Host')}
-> Co-host: {get_user('Co-host')}
-
-**Transportation Department**
-> Dispatcher: {get_user('Dispatcher')}
-> Bus Driver: {get_user('Bus Driver')}
-
-Please join the server and voice channel at the specified time.
-**Staff Boarding Time: {staff_time_str}**"""
-            else:
-                desc = f"""**Operation Information**
-> Staff Join Time: {join_time_str}
-> Boarding Start: {st_boarding}
-> Operation End: <t:{int(self.flight['end_timestamp'])}:t>
-> Server / Origin: {self.flight['origin']}
-> Vehicle: {self.flight['equipment']}
-
-**Operation Management**
-> Host: {get_user('Host')}
-> Co-host: {get_user('Co-host')}
-
-**Transportation Department**
-> Dispatcher: {get_user('Dispatcher')}
-> Bus Driver: {get_user('Bus Driver')}
-
-Please join the server and voice channel at the specified time.
-**Staff Boarding Time: {staff_time_str}**"""
-            if self.current_position:
-                desc = f"{EMOJI_INFO_STR} Assigning for: **{self.current_position}**\n\n" + desc
-
-            bus_title = self.flight.get("event_title") or self.flight.get("flight_code") or "Flight"
-            return discord.Embed(title=f"{EMOJI_BRAND_STR} | {bus_title} Briefing Sheet", description=desc, color=get_embed_color(self.flight.get('color')))
-
         if self.lang == "JP":
             desc = f"""**Flight Information**
 > Join time: {join_time_str}
@@ -5194,7 +4971,7 @@ Please join the server and voice channel at the specified time.
 **Ground Crew Department**
 > GC Supervisor(MR): {get_user('GC Supervisor(MR)')} 
 > Ground Crew: {disp('Ground Crew')}
-{bus_str}
+
 Please be sure to join the server at the specified time, and also join the voice channel.
 **# Staff boarding Time: {staff_time_str}**"""
         else:
@@ -5227,7 +5004,7 @@ Please be sure to join the server at the specified time, and also join the voice
 **Ground Crew Department**
 > GC Supervisor(MR): {get_user('GC Supervisor(MR)')} 
 > Ground Crew: {disp('Ground Crew')}
-{bus_str}
+
 Please join the server and VC at the specified time.
 **# Staff boarding Time: {staff_time_str}**"""
 
@@ -5306,7 +5083,7 @@ Please join the server and VC at the specified time.
         async with global_json_lock:
             fc_to_search = self.flight["flight_code"]
             target_idx = next(
-                (i for i, f in enumerate(FLIGHT_LOG_CACHE) if f["flight_code"] == fc_to_search or f["flight_code"] == f"Bus ({fc_to_search})"), -1)
+                (i for i, f in enumerate(FLIGHT_LOG_CACHE) if f["flight_code"] == fc_to_search), -1)
 
             is_new_msg = True
             sent_msg = None
@@ -5594,7 +5371,7 @@ async def _test_show_flight_previews(interaction, flight):
         e.add_field(name="Route", value=f"{flight['origin']} ➝ {flight.get('destination', '')}", inline=False)
         e.add_field(name="Aircraft Equipment", value=flight["equipment"], inline=False)
         e.add_field(name="Aircraft Operator", value=flight.get("airline") or default_airline(), inline=False)
-        e.add_field(name="Minimum Staff Needed", value=minimum_staff_text(use_bus=flight.get("use_bus")), inline=False)
+        e.add_field(name="Minimum Staff Needed", value=minimum_staff_text(), inline=False)
         e.add_field(name="Action", value=f"React to join.\n**Staff Briefing Time:** <t:{int(flight['staff_timestamp'])}:F>" + google_calendar_suffix(flight), inline=False)
         e.add_field(name="Time", value=f"<t:{flight['start_timestamp']}:F> - <t:{flight['end_timestamp']}:t> (<t:{flight['start_timestamp']}:R>)", inline=False)
         e.add_field(name=f"{EMOJI_CHECK_STR} Accepted (1)", value=f">>> {host_display}", inline=True)
@@ -5699,33 +5476,17 @@ class FlightLogModal(discord.ui.Modal, title="Flight-log Comments"):
         content = f"**{EMOJI_BRAND_STR} | {self.flight['flight_code']} Flight-log**\n\n"
         content += f"**Flight Management**\n> Host: {g('Host')}\n> Co-host: {g('Co-host')}\n\n"
 
-        is_pure_bus = self.flight.get("is_bus")
-        has_bus_service = self.flight.get("use_bus")
-
-
-        if is_pure_bus:
-            content += f"**Ground Crew Department**\n> MR: {g('GC Supervisor(MR)')}\n> Crew: {g('Ground Crew')}\n\n"
-            content += f"**Bus Driver Department**\n> Dispatcher: {g('Dispatcher')}\n> Bus Driver: {g('Bus Driver')}\n"
-        else:
-
-            content += f"**Flight Crew Department**\n> Captain: {g('Captain')}\n> First Officer: {g('First Officer')}\n\n"
-            content += f"**Airport Services**\n> Receptionist: {g('Receptionist')}\n> Airport Guide: {g('Airport Guide')}\n> Gate Agent: {g('Gate Agent')}\n> Lounge Agent: {g('Lounge Agent')}\n\n"
-            content += f"**Cabin Crew Department**\n> First Class: {g('First Class')}\n> Business Class: {g('Business Class')}\n> Premium Economy: {g('Premium Economy')}\n> Economy Class: {g('Economy Class')}\n\n"
-            content += f"**Ground Crew Department**\n> MR: {g('GC Supervisor(MR)')}\n> Crew: {g('Ground Crew')}\n"
-
-            if has_bus_service:
-                content += f"\n**Bus Driver Department**\n> Dispatcher: {g('Dispatcher')}\n> Bus Driver: {g('Bus Driver')}\n"
+        content += f"**Flight Crew Department**\n> Captain: {g('Captain')}\n> First Officer: {g('First Officer')}\n\n"
+        content += f"**Airport Services**\n> Receptionist: {g('Receptionist')}\n> Airport Guide: {g('Airport Guide')}\n> Gate Agent: {g('Gate Agent')}\n> Lounge Agent: {g('Lounge Agent')}\n\n"
+        content += f"**Cabin Crew Department**\n> First Class: {g('First Class')}\n> Business Class: {g('Business Class')}\n> Premium Economy: {g('Premium Economy')}\n> Economy Class: {g('Economy Class')}\n\n"
+        content += f"**Ground Crew Department**\n> MR: {g('GC Supervisor(MR)')}\n> Crew: {g('Ground Crew')}\n"
 
         content += "-" * 65 + "\n"
 
         c_str = lambda b: EMOJI_CHECK_STR if b else EMOJI_X_STR
-        if not is_pure_bus:
-            content += f"FC: {c_str(self.checks['fc'])}\n"
-            content += f"CC: {c_str(self.checks['cc'])}\n"
+        content += f"FC: {c_str(self.checks['fc'])}\n"
+        content += f"CC: {c_str(self.checks['cc'])}\n"
         content += f"GC: {c_str(self.checks['gc'])}\n"
-
-        if (is_pure_bus or has_bus_service) and self.checks.get("bus") is not None:
-            content += f"BUS: {c_str(self.checks['bus'])}\n"
         content += "-" * 67 + "\n"
         content += f"{self.comments.value}"
 
@@ -5832,18 +5593,18 @@ HELP_DATA = {
         }
     },
     "creation_group": {
-        "name": "Flight / Bus Creation",
+        "name": "Flight Creation",
         "ja": {
-            "title": "Flight / Bus Creation Commands",
-            "desc": "Commands for creating and applying for new events (flights and bus runs).",
-            "usage": "`/flight_app` — Apply to host a new flight\n`/dispatch_app` — Turn your approved application into a live recruitment\n`/suggest_flight` — Suggest a random flight (you can apply directly)\n`/create_flight` — Create a registered flight\n`/create_custom_flight` — Create a custom flight (image required)\n`/create_private_flight` — Private flight (staff only, no customer notice)\n`/create_private_flight_template` — Create a private flight from a template\n`/create_bus` — Create a registered bus run\n`/create_custom_bus` — Create a custom bus run\n`/recurring_flight` — Create a recurring flight (Discord repeating event)\n`/duplicate_flight` — Copy an existing flight to another date/time\n`/create_flighttest` / `/recurring_flighttest` — [Test] For the test server",
+            "title": "Flight Creation Commands",
+            "desc": "Commands for creating and applying for new flights.",
+            "usage": "`/flight_app` — Apply to host a new flight\n`/dispatch_app` — Turn your approved application into a live recruitment\n`/suggest_flight` — Suggest a random flight (you can apply directly)\n`/create_flight` — Create a registered flight\n`/create_custom_flight` — Create a custom flight (image required)\n`/create_private_flight` — Private flight (staff only, no customer notice)\n`/create_private_flight_template` — Create a private flight from a template\n`/recurring_flight` — Create a recurring flight (Discord repeating event)\n`/duplicate_flight` — Copy an existing flight to another date/time\n`/create_flighttest` / `/recurring_flighttest` — [Test] For the test server",
             "params": [],
             "note": "Only your own approved applications can be auto-expanded with `/dispatch_app`. If another customer flight is coming up soon, later flights are posted without a mention."
         },
         "en": {
             "title": "Create Events",
-            "desc": "Commands to create or apply for new flights and bus operations.",
-            "usage": "`/flight_app` — Apply for a flight\n`/dispatch_app` — Dispatch your approved application\n`/suggest_flight` — Get a random flight suggestion (apply directly)\n`/create_flight` — Standard flight\n`/create_custom_flight` — Custom flight (image required)\n`/create_private_flight` — Private, staff-only flight (no customer notice)\n`/create_private_flight_template` — Private flight from a template\n`/create_bus` — Standard bus\n`/create_custom_bus` — Custom bus\n`/recurring_flight` — Recurring flight (native repeating event)\n`/duplicate_flight` — Copy a flight to a new date/time\n`/create_flighttest` / `/recurring_flighttest` — [Test] Test server",
+            "desc": "Commands to create or apply for new flights.",
+            "usage": "`/flight_app` — Apply for a flight\n`/dispatch_app` — Dispatch your approved application\n`/suggest_flight` — Get a random flight suggestion (apply directly)\n`/create_flight` — Standard flight\n`/create_custom_flight` — Custom flight (image required)\n`/create_private_flight` — Private, staff-only flight (no customer notice)\n`/create_private_flight_template` — Private flight from a template\n`/recurring_flight` — Recurring flight (native repeating event)\n`/duplicate_flight` — Copy a flight to a new date/time\n`/create_flighttest` / `/recurring_flighttest` — [Test] Test server",
             "params": [],
             "note": "Approved applications can be dispatched directly. If another customer-facing flight is scheduled nearby, later flights are announced without a mention."
         }
@@ -6225,7 +5986,7 @@ FLIGHT_CHANNEL_CATEGORY_ID = cfg("channels.flight_channel_category")
 
 
 def flight_needs_briefing_first(item: dict) -> bool:
-    return not any(item.get(k) for k in ("is_private", "is_gamenight", "is_test", "is_bus"))
+    return not any(item.get(k) for k in ("is_private", "is_gamenight", "is_test"))
 
 
 def _flight_channel_names(code: str):
@@ -7350,21 +7111,17 @@ async def publish_queued_flight(flight: dict):
 
         image_url, image_bytes = await fetch_fresh_image_info(flight.get("source_channel_id"), flight.get("source_message_id"))
 
-        is_bus = flight.get("is_bus", False)
         is_private = flight.get("is_private", False)
         airline = flight.get("airline") or default_airline()
         
 
 
         c_guild = client.get_guild(STAFF_GUILD_ID if is_private else CUSTOMER_GUILD_ID)
-        event_name = flight.get("event_title") or (flight['flight_code'] if is_bus else f"{flight['flight_code']} {flight['origin']}→{flight.get('destination', '')}")
+        event_name = flight.get("event_title") or f"{flight['flight_code']} {flight['origin']}→{flight.get('destination', '')}"
         if is_private:
             event_name = f"[Private Flight] {event_name}"
         
-        if is_bus:
-            desc = f"`Host` <@{flight['host_id']}>\n`Server` {flight['origin']}\n> Information\n`Operator` {airline}\n`Vehicle` {flight['equipment']}"
-        else:
-            desc = f"`Host` <@{flight['host_id']}>\n`Origin` {flight['origin']}\n`Destination` {flight.get('destination', '')}\n> Information\n`Airline` {airline}\n`Aircraft` {flight['equipment']}\n`Classes` {flight.get('classes', 'Unknown')}"
+        desc = f"`Host` <@{flight['host_id']}>\n`Origin` {flight['origin']}\n`Destination` {flight.get('destination', '')}\n> Information\n`Airline` {airline}\n`Aircraft` {flight['equipment']}\n`Classes` {flight.get('classes', 'Unknown')}"
 
         event = await c_guild.create_scheduled_event(
             name=event_name, description=desc,
@@ -7385,15 +7142,10 @@ async def publish_queued_flight(flight: dict):
                                                      fallback=host_user.display_name)
         staff_embed.add_field(name="Host", value=host_display, inline=False)
         
-        if is_bus:
-            staff_embed.add_field(name="Route / Server", value=flight['origin'], inline=False)
-            staff_embed.add_field(name="Vehicle", value=flight['equipment'], inline=False)
-            staff_embed.add_field(name="Minimum Staff Needed", value=minimum_staff_text(is_bus=True), inline=False)
-        else:
-            staff_embed.add_field(name="Route", value=f"{flight['origin']} ➝ {flight.get('destination', '')}", inline=False)
-            staff_embed.add_field(name="Aircraft Equipment", value=flight['equipment'], inline=False)
-            staff_embed.add_field(name="Aircraft Operator", value=airline, inline=False)
-            staff_embed.add_field(name="Minimum Staff Needed", value=minimum_staff_text(use_bus=flight.get("use_bus")), inline=False)
+        staff_embed.add_field(name="Route", value=f"{flight['origin']} ➝ {flight.get('destination', '')}", inline=False)
+        staff_embed.add_field(name="Aircraft Equipment", value=flight['equipment'], inline=False)
+        staff_embed.add_field(name="Aircraft Operator", value=airline, inline=False)
+        staff_embed.add_field(name="Minimum Staff Needed", value=minimum_staff_text(), inline=False)
 
         staff_embed.add_field(name="Action", value=f"React to join.\n**Staff Briefing Time:** <t:{int(staff_dt.timestamp())}:F>" + google_calendar_suffix(flight), inline=False)
         ts_start = flight["start_timestamp"]
@@ -7425,34 +7177,21 @@ async def publish_queued_flight(flight: dict):
             return
 
         mention_line = get_customer_mention_line(flight)
-        if is_bus:
-            cust_msg_content = (
-                f"{EMOJI_TAIL_STR} **Operation Information**\n"
-                f"Operation name: {flight['flight_code']}\n"
-                f"Operator: {airline}\n"
-                f"Server: {flight['origin']}\n"
-                f"Date: <t:{ts_start}:D>\n"
-                f"Check-in Time: <t:{ts_start}:t>\n"
-                f"Vehicle: {flight['equipment']}\n"
-                f"{mention_line}"
-                f"{EMOJI_LINK_STR} **[Discord Event Link]({event.url})**"
-            )
-        else:
-            lock_ts = ts_start + 1200
-            cust_msg_content = (
-                f"{EMOJI_TAIL_STR} **Flight Information**\n"
-                f"Flight code: {flight['flight_code']}\n"
-                f"Airline: {airline}\n"
-                f"Departure Airport: {flight['origin']}\n"
-                f"Arrival Airport: {flight.get('destination', '')}\n"
-                f"Date: <t:{ts_start}:D>\n"
-                f"Check-in Time: <t:{ts_start}:t>\n"
-                f"Server Lock: <t:{lock_ts}:t>\n"
-                f"Equipment: {flight['equipment']}\n"
-                f"Class: {flight.get('classes', 'Unknown')}\n"
-                f"{mention_line}"
-                f"{EMOJI_LINK_STR} **[Discord Event Link]({event.url})**"
-            )
+        lock_ts = ts_start + 1200
+        cust_msg_content = (
+            f"{EMOJI_TAIL_STR} **Flight Information**\n"
+            f"Flight code: {flight['flight_code']}\n"
+            f"Airline: {airline}\n"
+            f"Departure Airport: {flight['origin']}\n"
+            f"Arrival Airport: {flight.get('destination', '')}\n"
+            f"Date: <t:{ts_start}:D>\n"
+            f"Check-in Time: <t:{ts_start}:t>\n"
+            f"Server Lock: <t:{lock_ts}:t>\n"
+            f"Equipment: {flight['equipment']}\n"
+            f"Class: {flight.get('classes', 'Unknown')}\n"
+            f"{mention_line}"
+            f"{EMOJI_LINK_STR} **[Discord Event Link]({event.url})**"
+        )
         
         flight["customer_msg_content"] = cust_msg_content
         flight["queued_for_limit"] = False
@@ -7479,13 +7218,13 @@ async def publish_queued_flight(flight: dict):
     except Exception as e:
         print(f"Queue Publish Error: {e}")
         
-async def process_flight_creation(host_user, data, image_bytes, saved_image_url, is_bus=False, end_time_str=None):
+async def process_flight_creation(host_user, data, image_bytes, saved_image_url, end_time_str=None):
     try:
         _blocked = db_write_blocked_message()
         if _blocked:
             return False, _blocked
         async with global_json_lock:
-            check_code = f"Bus ({data['flight_code']})" if is_bus else data["flight_code"]
+            check_code = data["flight_code"]
             if any(f["flight_code"] == check_code and not f.get("messages_deleted") for f in FLIGHT_LOG_CACHE):
                 return False, f"Flight/operation code `{data['flight_code']}` is already registered as active."
 
@@ -7565,8 +7304,6 @@ async def process_flight_creation(host_user, data, image_bytes, saved_image_url,
             is_queued = active_flights_count >= 5
 
             airline = data.get("airline") or default_airline()
-            if is_bus and (airline == default_airline() or not airline):
-                airline = data['flight_code']
 
             roblox_link = data.get('roblox_link', '')
 
@@ -7578,18 +7315,12 @@ async def process_flight_creation(host_user, data, image_bytes, saved_image_url,
                     valid_tokens.append(token)
             target_role_str = ' '.join(valid_tokens) if valid_tokens else f"<@&{NOTIFICATION_ROLE_ID}>"
 
-            if is_bus:
-                save_origin = data['origin']
-                save_dest = data['origin']
-                save_equip = ""
-                save_classes = ""
-            else:
-                save_origin = data['origin']
-                save_dest = data['destination']
-                save_equip = data['equipment']
-                save_classes = data['classes']
+            save_origin = data['origin']
+            save_dest = data['destination']
+            save_equip = data['equipment']
+            save_classes = data['classes']
 
-            save_flight_code = f"Bus ({data['flight_code']})" if is_bus else data['flight_code']
+            save_flight_code = data['flight_code']
 
 
             flight_dict = {
@@ -7617,8 +7348,6 @@ async def process_flight_creation(host_user, data, image_bytes, saved_image_url,
                 "mention_str": target_role_str,
                 "is_custom": data.get("is_custom", False),
                 "is_private": data.get("is_private", False),
-                "use_bus": data.get("use_bus", False),
-                "is_bus": is_bus,
                 "queued_for_limit": is_queued,
                 "no_mention": False
             }
@@ -7711,13 +7440,7 @@ async def flight_code_autocomplete(interaction: discord.Interaction, current: st
 
     return [app_commands.Choice(name=item["label"], value=item["value"]) 
             for item in FLIGHT_AUTOCOMPLETE_CACHE 
-            if "Transport" not in item["value"] and "Bus" not in item["value"] and current.lower() in item["search"]][:25]
-
-async def bus_template_autocomplete(interaction: discord.Interaction, current: str):
-
-    return [app_commands.Choice(name=item["label"], value=item["value"]) 
-            for item in FLIGHT_AUTOCOMPLETE_CACHE 
-            if ("Transport" in item["value"] or "Bus" in item["value"]) and current.lower() in item["search"]][:25]
+            if current.lower() in item["search"]][:25]
 
 
 
@@ -7864,10 +7587,10 @@ client.tree.add_command(loa_group)
 
 
 
-async def process_flighttest_creation(host_user, data, image_bytes, saved_image_url, is_bus=False):
+async def process_flighttest_creation(host_user, data, image_bytes, saved_image_url):
     try:
         async with global_json_lock:
-            check_code = f"Bus ({data['flight_code']})" if is_bus else data["flight_code"]
+            check_code = data["flight_code"]
             if any(f["flight_code"] == check_code and not f.get("messages_deleted") for f in FLIGHT_LOG_CACHE):
                 return False, f"Flight `{data['flight_code']}` is already registered as active."
 
@@ -7924,33 +7647,20 @@ async def process_flighttest_creation(host_user, data, image_bytes, saved_image_
 
         cust_msg_id = None
         if created_channel:
-            if is_bus:
-                cust_msg_content = (
-                    f"**Flight Schedule**\n\n"
-                    f"{EMOJI_TAIL_STR} **Operation Information**\n"
-                    f"Operation name: {data['flight_code']}\n"
-                    f"Operator: {airline}\n"
-                    f"Server: {data['origin']}\n"
-                    f"Date: <t:{int(pass_dt.timestamp())}:D>\n"
-                    f"Check-in Time: <t:{int(pass_dt.timestamp())}:t>\n"
-                    f"Vehicle: {data['equipment']}\n"
-                    f"{EMOJI_LINK_STR} **[Discord Event Link]({event_url})**"
-                )
-            else:
-                cust_msg_content = (
-                    f"**Flight Schedule**\n\n"
-                    f"{EMOJI_TAIL_STR} **Flight Information**\n"
-                    f"Flight code: {data['flight_code']}\n"
-                    f"Airline: {airline}\n"
-                    f"Departure Airport: {data['origin']}\n"
-                    f"Arrival Airport: {data.get('destination', '')}\n"
-                    f"Date: <t:{int(pass_dt.timestamp())}:D>\n"
-                    f"Check-in Time: <t:{int(pass_dt.timestamp())}:t>\n"
-                    f"Server Lock: <t:{int(lock_dt.timestamp())}:t>\n"
-                    f"Equipment: {data['equipment']}\n"
-                    f"Class: {data.get('classes', 'Unknown')}\n"
-                    f"{EMOJI_LINK_STR} **[Discord Event Link]({event_url})**"
-                )
+            cust_msg_content = (
+                f"**Flight Schedule**\n\n"
+                f"{EMOJI_TAIL_STR} **Flight Information**\n"
+                f"Flight code: {data['flight_code']}\n"
+                f"Airline: {airline}\n"
+                f"Departure Airport: {data['origin']}\n"
+                f"Arrival Airport: {data.get('destination', '')}\n"
+                f"Date: <t:{int(pass_dt.timestamp())}:D>\n"
+                f"Check-in Time: <t:{int(pass_dt.timestamp())}:t>\n"
+                f"Server Lock: <t:{int(lock_dt.timestamp())}:t>\n"
+                f"Equipment: {data['equipment']}\n"
+                f"Class: {data.get('classes', 'Unknown')}\n"
+                f"{EMOJI_LINK_STR} **[Discord Event Link]({event_url})**"
+            )
             try:
                 cust_msg = await created_channel.send(content=cust_msg_content, suppress_embeds=True, allowed_mentions=discord.AllowedMentions.none())
                 cust_msg_id = cust_msg.id
@@ -7967,10 +7677,7 @@ async def process_flighttest_creation(host_user, data, image_bytes, saved_image_
         staff_embed.add_field(name="Route", value=f"{data['origin']} ➝ {data.get('destination', '')}", inline=False)
         staff_embed.add_field(name="Aircraft Equipment", value=data['equipment'], inline=False)
         _cal_flight = {"flight_code": data.get("flight_code"), "origin": data.get("origin"),
-                       "destination": data.get("destination"), "is_bus": data.get("is_bus", False),
-                       "start_timestamp": int(pass_dt.timestamp()), "end_timestamp": int(end_dt.timestamp())}
-        _cal_flight = {"flight_code": data.get("flight_code"), "origin": data.get("origin"),
-                       "destination": data.get("destination"), "is_bus": data.get("is_bus", False),
+                       "destination": data.get("destination"),
                        "start_timestamp": int(pass_dt.timestamp()), "end_timestamp": int(end_dt.timestamp())}
         staff_embed.add_field(name="Action", value=f"React to join.\n**Staff Briefing Time:** <t:{int(staff_dt.timestamp())}:F>" + google_calendar_suffix(_cal_flight, start_ts=int(staff_dt.timestamp())), inline=False)
         
@@ -7980,7 +7687,7 @@ async def process_flighttest_creation(host_user, data, image_bytes, saved_image_
         staff_embed.add_field(name=f"{EMOJI_CHECK_STR} Accepted (1)", value=f">>> {host_display}", inline=True)
         staff_embed.add_field(name=f"{EMOJI_X_STR} Declined (0)", value="-", inline=True)
 
-        save_flight_code = f"Bus ({data['flight_code']})" if is_bus else data['flight_code']
+        save_flight_code = data['flight_code']
         staff_embed.set_footer(text=signup_footer(save_flight_code, host_display))
 
         staff_image_file = embed_image_as_attachment(staff_embed, image_bytes, saved_image_url,
@@ -8022,7 +7729,6 @@ async def process_flighttest_creation(host_user, data, image_bytes, saved_image_
                 "pending_customer_msg": False, "customer_msg_timestamp": 0,
                 "host_timezone_str": data['host_timezone_str'],
                 "messages_deleted": False, "is_custom": False,
-                "use_bus": data.get("use_bus", False), "is_bus": is_bus,
                 "is_test": True
             }
             async with global_json_lock:
@@ -8087,8 +7793,7 @@ async def delete_discord_recurring_event(guild_id, event_id):
 class RouteChangeSelect(discord.ui.Select):
     def __init__(self, flight_code, routes=None):
         self.target_flight_code = flight_code
-        routes = routes if routes is not None else [(i["value"], i["label"]) for i in FLIGHT_AUTOCOMPLETE_CACHE
-                                                     if "Transport" not in i["value"] and "Bus" not in i["value"]]
+        routes = routes if routes is not None else [(i["value"], i["label"]) for i in FLIGHT_AUTOCOMPLETE_CACHE]
         options = [discord.SelectOption(label=label[:100], value=code[:100]) for code, label in routes[:25]]
         if not options:
             options = [discord.SelectOption(label="-", value="_")]
@@ -8135,8 +7840,6 @@ class RecurringFlightSignupView(FlightSignupView):
         flight = next((f for f in FLIGHT_LOG_CACHE if f["flight_code"] == flight_code), None)
         if not flight or interaction.user.id != flight.get('host_id'):
             return await interaction.response.send_message(ephemeral=True, view=build_v2_card('Notice', [(None, 'Only the host can change the route.')]))
-        if flight.get("is_bus"):
-            return await interaction.response.send_message(ephemeral=True, view=build_v2_card('Notice', [(None, 'Changing the route of a recurring bus run is not currently supported.')]))
         await interaction.response.send_message("Select the route for the next flight (the time will be kept)", view=RouteChangeView(flight_code), ephemeral=True)
 
     @discord.ui.button(label="Stop", style=discord.ButtonStyle.danger, custom_id="recur_stop", row=1)
@@ -8161,19 +7864,14 @@ class RecurringFlightSignupView(FlightSignupView):
                     target_guild = client.get_guild(guild_id)
                     image_url, image_bytes = await fetch_fresh_image_info(flight.get("source_channel_id"), flight.get("source_message_id"))
                     
-                    is_bus = flight.get("is_bus", False)
                     airline = flight.get("airline") or default_airline()
                     origin = flight.get("origin", "Unknown")
                     dest = flight.get("destination", "Unknown")
                     equipment = flight.get("equipment", "Unknown")
-                    display_code = flight_code.replace("Bus (", "").replace(")", "").replace("[TEST] ", "").replace("TEST_REC_", "").replace("REC_", "")
+                    display_code = flight_code.replace("[TEST] ", "").replace("TEST_REC_", "").replace("REC_", "")
                     
-                    if is_bus:
-                        event_name = display_code
-                        desc = f"`Host` <@{flight['host_id']}>\n`Server` {origin}\n> Information\n`Operator` {airline}\n`Vehicle` {equipment}"
-                    else:
-                        event_name = f"{display_code} {origin}→{dest}"
-                        desc = f"`Host` <@{flight['host_id']}>\n`Origin` {origin}\n`Destination` {dest}\n> Information\n`Airline` {airline}\n`Aircraft` {equipment}\n`Classes` {flight.get('classes', 'Unknown')}"
+                    event_name = f"{display_code} {origin}→{dest}"
+                    desc = f"`Host` <@{flight['host_id']}>\n`Origin` {origin}\n`Destination` {dest}\n> Information\n`Airline` {airline}\n`Aircraft` {equipment}\n`Classes` {flight.get('classes', 'Unknown')}"
                     
                     pass_dt = datetime.datetime.fromtimestamp(flight["start_timestamp"], tz=datetime.timezone.utc)
                     end_dt = datetime.datetime.fromtimestamp(flight["end_timestamp"], tz=datetime.timezone.utc)
@@ -8268,25 +7966,16 @@ async def recurring_spawner_task():
                 s_channel = client.get_channel(f["staff_channel_id"])
                 if s_channel:
                     embed_color = get_embed_color(f.get('color'))
-                    display_code = f['flight_code'].replace("Bus (", "").replace(")", "").replace("[TEST] ", "")
-                    
-                    if f.get("is_bus"):
-                        title = f"{display_code}"
-                    else:
-                        title = f"{display_code} {f['origin']}→{f['destination']}"
+                    display_code = f['flight_code'].replace("[TEST] ", "")
+                    title = f"{display_code} {f['origin']}→{f['destination']}"
                         
                     staff_embed = discord.Embed(title=signup_embed_title(f, title), description=render_staff_description(f, "staff_description_recurring"), color=embed_color)
                     host_name = await get_server_display_name(f["host_id"], f.get("staff_guild_id") or STAFF_GUILD_ID, fallback="Host")
                     
                     staff_embed.add_field(name="Host", value=host_name, inline=False)
-                    if f.get("is_bus"):
-                        staff_embed.add_field(name="Route / Server", value=f['origin'], inline=False)
-                        staff_embed.add_field(name="Vehicle", value=f['equipment'], inline=False)
-                        staff_embed.add_field(name="Minimum Staff Needed", value=minimum_staff_text(is_bus=True), inline=False)
-                    else:
-                        staff_embed.add_field(name="Route", value=f"{f['origin']} ➝ {f['destination']}", inline=False)
-                        staff_embed.add_field(name="Aircraft Equipment", value=f['equipment'], inline=False)
-                        staff_embed.add_field(name="Minimum Staff Needed", value=minimum_staff_text(use_bus=f.get("use_bus")), inline=False)
+                    staff_embed.add_field(name="Route", value=f"{f['origin']} ➝ {f['destination']}", inline=False)
+                    staff_embed.add_field(name="Aircraft Equipment", value=f['equipment'], inline=False)
+                    staff_embed.add_field(name="Minimum Staff Needed", value=minimum_staff_text(), inline=False)
                     
                     staff_embed.add_field(name="Action", value=f"React to join.\n**Staff Briefing Time:** <t:{f['staff_timestamp']}:F>" + google_calendar_suffix(f), inline=False)
                     staff_embed.add_field(name="Time", value=f"<t:{f['start_timestamp']}:F> - <t:{f['end_timestamp']}:t> (<t:{f['start_timestamp']}:R>)", inline=False)
@@ -8310,13 +7999,10 @@ async def recurring_spawner_task():
 
                 c_channel = client.get_channel(f["customer_channel_id"])
                 if c_channel and f.get("customer_message_id"):
-                    display_code = f['flight_code'].replace("Bus (", "").replace(")", "").replace("[TEST] ", "")
+                    display_code = f['flight_code'].replace("[TEST] ", "")
                     rec = dict(f)
                     rec["flight_code"] = display_code
-                    if f.get("is_bus"):
-                        cust_msg_content = render_customer_post(rec, key="customer_post_recurring_bus")
-                    else:
-                        cust_msg_content = render_customer_post(rec, key="customer_post_recurring")
+                    cust_msg_content = render_customer_post(rec, key="customer_post_recurring")
                     try:
                         c_msg = await c_channel.fetch_message(f["customer_message_id"])
                         await c_msg.edit(content=cust_msg_content)
@@ -8566,7 +8252,7 @@ async def get_least_used_flight_suggestion(bot_client):
 
     valid_templates = [
         k for k, v in FLIGHT_DB.items() 
-        if "Transport" not in k and "Bus" not in k and v.get("origin", "").lower() not in used_origins
+        if v.get("origin", "").lower() not in used_origins
     ]
     
     if not valid_templates:
@@ -9396,7 +9082,7 @@ async def route_stats_cmd(interaction: discord.Interaction, keyword: str):
 
 
 @client.tree.command(name="find_staff", description="Find upcoming flights where a specific position is still unassigned.")
-@app_commands.describe(position="Position name to search for (e.g. Captain, Ground Crew, Bus Driver)")
+@app_commands.describe(position="Position name to search for (e.g. Captain, Ground Crew, First Officer)")
 async def find_staff_cmd(interaction: discord.Interaction, position: str):
     if LOG_MANAGER_ROLE_ID not in [r.id for r in interaction.user.roles] and not is_chief(interaction.user):
         return await interaction.response.send_message(ephemeral=True, view=build_v2_card('Notice', [(None, 'No permission.')]))

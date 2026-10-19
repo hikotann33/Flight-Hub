@@ -65,7 +65,6 @@ CORE_BINDINGS = [
     ("roles.ground_ops", "ROLE_GROUND_OPS"),
     ("roles.cabin_crew", "ROLE_CABIN_CREWS"),
     ("roles.flight_ops", "ROLE_FLIGHT_OPS"),
-    ("roles.bus_driver", "ROLE_BUS_DRIVER_1"),
     ("roles.exclude_remind", "EXCLUDE_REMIND_ROLE_ID"),
     ("roles.exclude_remind_2", "EXCLUDE_REMIND_ROLE_ID_2"),
     ("roles.chief", "CHIEF_ROLE_ID"),

@@ -33,7 +33,6 @@ ROLE_SPECS = [
     ("roles.ground_ops", "Ground Ops"),
     ("roles.cabin_crew", "Cabin Crews"),
     ("roles.flight_ops", "Flight Ops"),
-    ("roles.bus_driver", "Bus Driver"),
     ("roles.chief", "Chief"),
     ("roles.flight_verifier", "Flight Verifier"),
     ("roles.loa", "LOA"),

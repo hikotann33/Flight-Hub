@@ -164,7 +164,7 @@ def dashboard_sections(stats):
 CSV_COLUMNS = [
     "flight_code", "origin", "destination", "equipment", "classes", "airline",
     "start_time", "end_time", "start_timestamp", "end_timestamp",
-    "host_id", "is_bus", "use_bus", "is_test", "briefing_sent",
+    "host_id", "is_test", "briefing_sent",
     "accepted_count", "declined_count",
 ]
 
@@ -192,8 +192,6 @@ def flight_to_row(flight):
         "start_timestamp": flight.get("start_timestamp", ""),
         "end_timestamp": flight.get("end_timestamp", ""),
         "host_id": flight.get("host_id", ""),
-        "is_bus": bool(flight.get("is_bus")),
-        "use_bus": bool(flight.get("use_bus")),
         "is_test": bool(flight.get("is_test")),
         "briefing_sent": bool(flight.get("briefing_sent")),
         "accepted_count": len(flight.get("accepted_users") or []),
