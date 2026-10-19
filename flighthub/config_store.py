@@ -1,5 +1,7 @@
+import copy
 import json
 import os
+import re
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _DEFAULT_PATH = os.path.join(_ROOT, "config", "config.json")
@@ -73,6 +75,86 @@ CORE_BINDINGS = [
     ("roles.profile_export", "LOG_COPY_ROLE_ID"),
 ]
 
+# ---------------------------------------------------------------------------
+# Appearance: colours and emojis (all configurable, all defaulting to
+# stock Unicode emoji so the bot works with no custom emoji at all).
+# ---------------------------------------------------------------------------
+
+COLOR_KEYS = ("primary", "private", "success", "warning", "danger", "info")
+
+COLOR_LABELS = {
+    "primary": "Primary (main embeds, dark blue)",
+    "private": "Private flight",
+    "success": "Success",
+    "warning": "Warning",
+    "danger": "Danger",
+    "info": "Info",
+}
+
+DEFAULT_EMOJI_STRINGS = {
+    "check": "\u2705",
+    "x": "\u274c",
+    "noti": "\U0001f514",
+    "info": "\u2139\ufe0f",
+    "search": "\U0001f50d",
+    "baggage": "\U0001f9f3",
+    "tail": "\u2708\ufe0f",
+    "link": "\U0001f517",
+    "brand": "\u2708\ufe0f",
+}
+
+DEFAULT_SIGNUP_TYPE_ICONS = {
+    "flight": "\u2708\ufe0f",
+    "custom": "\U0001f6e0\ufe0f",
+    "test": "\U0001f9ea",
+    "recurring": "\U0001f501",
+    "private": "\U0001f512",
+    "gamenight": "\U0001f3ae",
+}
+
+DEFAULT_FLIGHT_APPROVED = "\u2705"
+
+EMOJI_LABELS = {
+    "check": "Check mark",
+    "x": "Cross mark",
+    "noti": "Notification bell",
+    "info": "Info",
+    "search": "Search",
+    "baggage": "Baggage",
+    "tail": "Tail (announcement)",
+    "link": "Link",
+    "brand": "Brand",
+    "flight_approved": "Flight approved (custom emoji)",
+}
+
+SIGNUP_TYPE_LABELS = {
+    "flight": "Recruitment: regular flight",
+    "custom": "Recruitment: custom flight",
+    "test": "Recruitment: test flight",
+    "recurring": "Recruitment: recurring flight",
+    "private": "Recruitment: private flight",
+    "gamenight": "Recruitment: game night",
+}
+
+EMOJI_CORE_ATTRS = {
+    "check": "EMOJI_CHECK_STR",
+    "x": "EMOJI_X_STR",
+    "noti": "EMOJI_NOTI_STR",
+    "info": "EMOJI_INFO_STR",
+    "search": "EMOJI_SEARCH_STR",
+    "baggage": "EMOJI_BAGGAGE_STR",
+    "tail": "EMOJI_TAIL_STR",
+    "link": "EMOJI_LINK_STR",
+    "brand": "EMOJI_BRAND_STR",
+}
+
+COLOR_CORE_ATTRS = {
+    "primary": "EMBED_COLOR",
+    "private": "PRIVATE_FLIGHT_COLOR",
+}
+
+_CUSTOM_EMOJI_RE = re.compile(r"^<(a?):([^<>:\s]{1,32}):(\d{17,20})>$")
+
 
 def _deep_merge(base, override):
     result = dict(base)
@@ -92,7 +174,9 @@ def load():
                 data = json.load(handle) or {}
         except (OSError, ValueError):
             data = {}
-    return _deep_merge(DEFAULTS, data)
+    # deepcopy so the live config never shares nested dicts with DEFAULTS:
+    # editing a colour in the wizard must not rewrite the built-in default.
+    return _deep_merge(copy.deepcopy(DEFAULTS), data)
 
 
 CONFIG = load()
@@ -153,6 +237,144 @@ def apply_to_core(core_module):
     return applied
 
 
+# ---------------------------------------------------------------------------
+# Appearance helpers
+# ---------------------------------------------------------------------------
+
+def parse_hex_color(text):
+    """Parse ``#RRGGBB`` / ``RRGGBB`` / ``0xRRGGBB`` into an RGB int.
+
+    Returns None when the text is not a valid 6 digit hex colour.
+    """
+    raw = str(text or "").strip()
+    if not raw:
+        return None
+    if raw[:2].lower() == "0x":
+        raw = raw[2:]
+    raw = raw.lstrip("#")
+    if len(raw) != 6 or any(ch not in "0123456789abcdefABCDEF" for ch in raw):
+        return None
+    return int(raw, 16)
+
+
+def format_hex_color(value):
+    """Render a stored colour value as ``#RRGGBB``."""
+    try:
+        return "#%06X" % (int(value) & 0xFFFFFF)
+    except (TypeError, ValueError):
+        return "#------"
+
+
+def parse_emoji_value(text, as_id=False):
+    """Normalise an emoji pasted by a user.
+
+    Accepts a Unicode emoji (``✅``) or a custom emoji (``<:name:123456789012345678>``,
+    ``<a:name:123456789012345678>``). With ``as_id=True`` only a custom emoji (or a
+    bare numeric id) is accepted and its id is returned.
+
+    Returns ``(value, error)``. ``(None, None)`` means "reset to the default".
+    """
+    raw = str(text or "").strip()
+    if not raw:
+        return None, None
+    match = _CUSTOM_EMOJI_RE.match(raw)
+    if match:
+        return (int(match.group(3)), None) if as_id else (raw, None)
+    if as_id:
+        if raw.isdigit():
+            return int(raw), None
+        return None, "Paste a custom emoji (`<:name:id>`) or its numeric id."
+    if len(raw) > 64:
+        return None, "That value is too long (64 characters max)."
+    if any(ord(ch) < 0x80 for ch in raw):
+        return None, "Paste an emoji (Unicode or `<:name:id>`), not plain text."
+    return raw, None
+
+
+def current_emoji(key):
+    """The emoji string now in effect for a plain ``emojis.<key>`` setting."""
+    if key == "flight_approved":
+        emoji_id = cfg("emojis.flight_approved")
+        return f"<:ch:{emoji_id}>" if emoji_id else DEFAULT_FLIGHT_APPROVED
+    return cfg(f"emojis.{key}") or DEFAULT_EMOJI_STRINGS.get(key, "")
+
+
+def current_signup_icon(key):
+    """The emoji string now in effect for a ``emojis.signup_type.<key>`` icon."""
+    icons = dict(DEFAULT_SIGNUP_TYPE_ICONS)
+    for name, value in (cfg("emojis.signup_type") or {}).items():
+        if value and name in icons:
+            icons[name] = value
+    return icons.get(key, "")
+
+
+def reset_emoji(key):
+    """Clear a single emoji setting back to its default."""
+    if key == "flight_approved":
+        return set_value("emojis.flight_approved", None)
+    if key in DEFAULT_SIGNUP_TYPE_ICONS:
+        return set_value(f"emojis.signup_type.{key}", None)
+    return set_value(f"emojis.{key}", None)
+
+
+def reset_all_emojis():
+    """Clear every emoji setting (and the signup-type icons) back to defaults."""
+    set_value("emojis", {})
+
+
+def reset_colors():
+    """Restore every colour to the built-in default."""
+    set_value("colors", dict(DEFAULTS["colors"]))
+
+
+def apply_ui_to_core(core_module):
+    """Push the configured colours and emojis into an imported core module.
+
+    Everything here is read at call time, so a running bot picks the new values
+    up immediately. The only exception is the approve button of
+    ``/flight_app`` (bound when the persistent view is registered), which needs
+    a restart.
+    """
+    applied = []
+    if core_module is None:
+        return applied
+
+    for key, attr in COLOR_CORE_ATTRS.items():
+        value = cfg(f"colors.{key}")
+        if value is None:
+            value = DEFAULTS["colors"][key]
+        try:
+            setattr(core_module, attr, int(value))
+            applied.append(attr)
+        except (TypeError, ValueError):
+            pass
+
+    emoji_id = cfg("emojis.flight_approved")
+    if emoji_id is not None and not str(emoji_id).isdigit():
+        emoji_id = None
+    elif emoji_id is not None:
+        emoji_id = int(emoji_id)
+    core_module.FLIGHT_APPROVED_EMOJI_ID = emoji_id
+    core_module.FLIGHT_APPROVED_EMOJI = f"<:ch:{emoji_id}>" if emoji_id else DEFAULT_FLIGHT_APPROVED
+    applied.append("FLIGHT_APPROVED_EMOJI")
+
+    for key, attr in EMOJI_CORE_ATTRS.items():
+        setattr(core_module, attr, str(cfg(f"emojis.{key}") or DEFAULT_EMOJI_STRINGS[key]))
+        applied.append(attr)
+
+    icons = dict(DEFAULT_SIGNUP_TYPE_ICONS)
+    for key, value in (cfg("emojis.signup_type") or {}).items():
+        if value and key in icons:
+            try:
+                parsed, _err = parse_emoji_value(value)
+            except Exception:
+                parsed = None
+            icons[key] = parsed or icons[key]
+    core_module.SIGNUP_TYPE_ICON = icons
+    applied.append("SIGNUP_TYPE_ICON")
+    return applied
+
+
 def summary_lines():
     lines = []
     for group in ("guilds", "channels", "roles"):
@@ -183,4 +405,4 @@ def import_ui_settings(data):
 
 def reset_ui_settings():
     for section in UI_SECTIONS:
-        CONFIG[section] = dict(DEFAULTS.get(section, {}) or {})
+        CONFIG[section] = copy.deepcopy(DEFAULTS.get(section, {}))

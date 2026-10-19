@@ -244,7 +244,7 @@ def _component_text(value, limit=4000):
     return text if len(text) <= limit else text[: limit - 18].rstrip() + "… [truncated]"
 
 
-def build_v2_card(title, sections=(), *, color=EMBED_COLOR, footer=None, content=None):
+def build_v2_card(title, sections=(), *, color=None, footer=None, content=None):
     view = discord.ui.LayoutView(timeout=180)
     children = []
 
@@ -279,7 +279,7 @@ def build_v2_card(title, sections=(), *, color=EMBED_COLOR, footer=None, content
         children.append(discord.ui.TextDisplay(footer_text))
     if not children:
         children.append(discord.ui.TextDisplay("No details available."))
-    accent = getattr(color, "value", color)
+    accent = getattr(color, "value", color if color is not None else EMBED_COLOR)
     view.add_item(discord.ui.Container(*children, accent_color=accent))
     return view
 
@@ -1605,8 +1605,8 @@ def disable_view_items(view):
     _walk(view.children)
 
 
-def create_info_embed(title, description, color=EMBED_COLOR):
-    return discord.Embed(title=title, description=description, color=color)
+def create_info_embed(title, description, color=None):
+    return discord.Embed(title=title, description=description, color=EMBED_COLOR if color is None else color)
 
 
 def build_google_calendar_url(flight: dict, start_ts=None, end_ts=None) -> str:

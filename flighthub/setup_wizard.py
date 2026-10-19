@@ -85,6 +85,11 @@ def apply_config():
     if core is None:
         return []
     applied = cs.apply_to_core(core)
+    applied += cs.apply_ui_to_core(core)
+    try:
+        theme.refresh()
+    except Exception:
+        pass
     for attr in ("STAFF_GUILD", "CUSTOMER_GUILD"):
         if hasattr(core, attr):
             gid = cs.cfg("guilds.staff") if attr == "STAFF_GUILD" else cs.cfg("guilds.customer")
@@ -110,6 +115,198 @@ class CustomerGuildSelect(discord.ui.Select):
         await interaction.response.edit_message(
             embed=theme.success("Customer server set", f"Customer server: **{guild.name if guild else gid}**"),
             view=SetupPanel(interaction.user.id))
+
+
+# ---------------------------------------------------------------------------
+# Appearance: colours and emojis (everything here is applied live)
+# ---------------------------------------------------------------------------
+
+_RESTART_NOTE = ("Changes take effect immediately. Controls that were built at "
+                 "startup - such as the approve button of `/flight_app` - need a "
+                 "bot restart.")
+
+# A Discord modal holds at most five inputs, so the six colours are split.
+COLOR_GROUPS = {
+    "main": ("primary", "private"),
+    "status": ("success", "warning", "danger", "info"),
+}
+
+
+def color_panel_embeds():
+    """A summary embed plus one colour swatch embed per setting."""
+    lines = []
+    for key in cs.COLOR_KEYS:
+        value = cs.cfg(f"colors.{key}", cs.DEFAULTS["colors"][key])
+        lines.append(f"{key} - `{cs.format_hex_color(value)}`")
+    head = theme.settings(
+        "Color settings",
+        "\n".join(lines) + "\n\nEvery colour is a 6 digit hex value such as `#1B3444`.\n" + _RESTART_NOTE)
+    return [head] + [
+        discord.Embed(title=cs.COLOR_LABELS[key], color=cs.cfg(f"colors.{key}", cs.DEFAULTS["colors"][key]))
+        for key in cs.COLOR_KEYS
+    ]
+
+
+def emoji_panel_embed():
+    lines = [
+        "Paste a **Unicode emoji** or a **custom emoji** (`<:name:id>`).",
+        "Leave the field empty to go back to the default.",
+        "",
+        "**Standard icons**",
+    ]
+    for key, label in cs.EMOJI_LABELS.items():
+        lines.append(f"{label} - {cs.current_emoji(key)}")
+    lines += ["", "**Recruitment heading icons**"]
+    for key, label in cs.SIGNUP_TYPE_LABELS.items():
+        lines.append(f"{label} - {cs.current_signup_icon(key)}")
+    return theme.settings("Emoji settings", "\n".join(lines) + "\n\n" + _RESTART_NOTE)
+
+
+class OwnerView(discord.ui.View):
+    """A view that only the person who ran /setup may operate."""
+
+    def __init__(self, author_id, timeout=600):
+        super().__init__(timeout=timeout)
+        self.author_id = author_id
+
+    async def interaction_check(self, interaction):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message(
+                embed=theme.warning("Not allowed", "Only the person who ran /setup can use these controls."),
+                ephemeral=True)
+            return False
+        return True
+
+
+class ColorPanelView(OwnerView):
+    @discord.ui.button(label="Main colors", style=discord.ButtonStyle.primary, emoji="\U0001f3a8")
+    async def edit_main_colors(self, interaction, button):
+        await interaction.response.send_modal(ColorModal(self.author_id, COLOR_GROUPS["main"]))
+
+    @discord.ui.button(label="Status colors", style=discord.ButtonStyle.primary)
+    async def edit_status_colors(self, interaction, button):
+        await interaction.response.send_modal(ColorModal(self.author_id, COLOR_GROUPS["status"]))
+
+    @discord.ui.button(label="Reset colors", style=discord.ButtonStyle.danger)
+    async def reset_colors_btn(self, interaction, button):
+        cs.reset_colors()
+        cs.save()
+        apply_config()
+        await interaction.response.edit_message(embeds=color_panel_embeds(), view=self)
+
+
+class ColorModal(discord.ui.Modal):
+    """A modal edits at most five colours, so the six are split in two groups."""
+
+    def __init__(self, author_id, keys):
+        keys = list(keys)[:5]
+        super().__init__(title=("Colors: " + ", ".join(keys))[:45], timeout=600)
+        self.author_id = author_id
+        self.fields = {}
+        for key in keys:
+            item = discord.ui.TextInput(
+                label=cs.COLOR_LABELS[key],
+                default=cs.format_hex_color(cs.cfg(f"colors.{key}", cs.DEFAULTS["colors"][key])),
+                placeholder="#1B3444 - leave empty to keep",
+                required=False,
+                max_length=9,
+            )
+            self.add_item(item)
+            self.fields[key] = item
+
+    async def on_submit(self, interaction):
+        errors, new_values = [], {}
+        for key, item in self.fields.items():
+            raw = (item.value or "").strip()
+            if not raw:
+                new_values[key] = cs.cfg(f"colors.{key}", cs.DEFAULTS["colors"][key])
+                continue
+            parsed = cs.parse_hex_color(raw)
+            if parsed is None:
+                errors.append(f"**{key}**: `{raw}` is not a hex color (use e.g. `#1B3444`).")
+            else:
+                new_values[key] = parsed
+        if errors:
+            await interaction.response.send_message(
+                embed=theme.error("Check the colors", "\n".join(errors)), ephemeral=True)
+            return
+        for key, value in new_values.items():
+            cs.set_value(f"colors.{key}", value)
+        cs.save()
+        applied = apply_config()
+        await interaction.response.send_message(
+            embeds=color_panel_embeds(), view=ColorPanelView(self.author_id), ephemeral=True)
+        print(f"[setup] appearance settings applied ({len(applied)} core values updated)")
+
+
+class EmojiSelect(discord.ui.Select):
+    def __init__(self, author_id):
+        self.author_id = author_id
+        options = []
+        for key, label in list(cs.EMOJI_LABELS.items()) + list(cs.SIGNUP_TYPE_LABELS.items()):
+            current = cs.current_emoji(key) if key in cs.EMOJI_LABELS else cs.current_signup_icon(key)
+            options.append(discord.SelectOption(label=label[:100], value=key, description=f"Now: {current}"[:100]))
+        super().__init__(placeholder="Choose an emoji to change...", options=options, min_values=1, max_values=1)
+
+    async def callback(self, interaction):
+        key = self.values[0]
+        label = cs.EMOJI_LABELS.get(key) or cs.SIGNUP_TYPE_LABELS.get(key, key)
+        await interaction.response.send_modal(EmojiEditModal(self.author_id, key, label))
+
+
+class EmojiPanelView(OwnerView):
+    def __init__(self, author_id, timeout=600):
+        super().__init__(author_id, timeout)
+        self.add_item(EmojiSelect(author_id))
+
+    @discord.ui.button(label="Reset all emojis", style=discord.ButtonStyle.danger, row=1)
+    async def reset_all_emojis_btn(self, interaction, button):
+        cs.reset_all_emojis()
+        cs.save()
+        apply_config()
+        await interaction.response.edit_message(embed=emoji_panel_embed(), view=EmojiPanelView(self.author_id))
+
+
+class EmojiEditModal(discord.ui.Modal):
+    def __init__(self, author_id, key, label):
+        super().__init__(title=f"Emoji: {label}"[:45], timeout=300)
+        self.author_id = author_id
+        self.key = key
+        self.label = label
+        current = cs.current_emoji(key) if key in cs.EMOJI_LABELS else cs.current_signup_icon(key)
+        self.field = discord.ui.TextInput(
+            label="New emoji",
+            placeholder="✅ or <:name:123456789012345678>",
+            default=(str(current)[:60] if current else None),
+            required=False,
+            max_length=80,
+        )
+        self.add_item(self.field)
+
+    async def on_submit(self, interaction):
+        value, error = cs.parse_emoji_value(self.field.value, as_id=(self.key == "flight_approved"))
+        if error:
+            await interaction.response.send_message(
+                embed=theme.error("Invalid emoji", error), ephemeral=True)
+            return
+        if value is None:
+            cs.reset_emoji(self.key)
+            action = "reset to the default"
+        else:
+            if self.key == "flight_approved":
+                cs.set_value("emojis.flight_approved", value)
+            elif self.key in cs.DEFAULT_SIGNUP_TYPE_ICONS:
+                cs.set_value(f"emojis.signup_type.{self.key}", value)
+            else:
+                cs.set_value(f"emojis.{self.key}", value)
+            action = "saved"
+        cs.save()
+        apply_config()
+        shown = cs.current_emoji(self.key) if self.key in cs.EMOJI_LABELS else cs.current_signup_icon(self.key)
+        await interaction.response.send_message(
+            embed=theme.success("Emoji updated",
+                                f"{self.label} is now {shown} ({action}).\n" + _RESTART_NOTE),
+            view=EmojiPanelView(self.author_id), ephemeral=True)
 
 
 class SetupPanel(discord.ui.View):
@@ -183,6 +380,15 @@ class SetupPanel(discord.ui.View):
         cs.save()
         await interaction.response.send_message(embed=theme.warning("Reset", "The setup-complete flag was cleared (values were kept)."), ephemeral=True)
 
+    @discord.ui.button(label="Colors", style=discord.ButtonStyle.secondary, row=3, emoji="\U0001f3a8")
+    async def colors(self, interaction, button):
+        await interaction.response.send_modal(ColorModal(self.author_id, COLOR_GROUPS["main"]))
+
+    @discord.ui.button(label="Emojis", style=discord.ButtonStyle.secondary, row=3, emoji="\U0001f3ad")
+    async def emojis(self, interaction, button):
+        await interaction.response.send_message(
+            embed=emoji_panel_embed(), view=EmojiPanelView(self.author_id), ephemeral=True)
+
 
 class UseSelfStaffButton(discord.ui.Button):
     def __init__(self):
@@ -249,6 +455,8 @@ async def setup_cmd(interaction):
         "1. Set the **staff server**.\n"
         "2. Set the **customer server**.\n"
         "3. Auto-detect channels and roles (names must match, see docs/SETUP.md).\n"
-        "4. **Save & finish**, then restart the bot.")
+        "4. Set the **colors** (the main dark blue and the status colors).\n"
+        "5. Set the **emojis** (stock Unicode emoji are built in, custom emoji are optional).\n"
+        "6. **Save & finish**, then restart the bot.")
     await interaction.response.send_message(embed=emb, view=SetupPanel(interaction.user.id), ephemeral=True)
 
