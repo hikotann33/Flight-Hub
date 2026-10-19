@@ -6,6 +6,9 @@
 
 **v2** · オープンソース · [MIT ライセンス](LICENSE)
 
+**🌐 公開サイト（英語）**: https://your-org.github.io/flight-hub/
+（このリポジトリの `docs/index.html` を GitHub Pages で公開しています）
+
 `discord.py` で作られた、Discord 向けのオープンソースなフライト運用ボットです。
 どなたでも自分の Discord サーバーで運用できるようにクリーンアップしたリリースです。
 
@@ -84,8 +87,12 @@ Flight-Hub/
 ├── config/
 │   └── config.example.json    # /setup がコピーする config/config.json の雛形
 ├── docs/
-│   ├── SETUP.md               # セットアップ手順
-│   └── COMMANDS.md            # コマンド一覧
+│   ├── index.html               # 公開サイト（英語ランディングページ）
+│   ├── style.css                # サイトのスタイルシート
+│   ├── favicon.svg              # サイトのアイコン
+│   ├── .nojekyll                # GitHub Pages で Jekyll を無効化
+│   ├── SETUP.md                 # セットアップ手順
+│   └── COMMANDS.md              # コマンド一覧
 └── flighthub/                 # Bot 本体のパッケージ
     ├── core.py                # データ層・埋め込み・共通ヘルパー・クライアント
     ├── config_store.py        # 設定の読み書き（ドット区切りでアクセス）
@@ -98,9 +105,11 @@ Flight-Hub/
     ├── ops_features.py        # スタッフプロフィール・評価・LOA・統計
     ├── test_flight.py         # テストサーバー向けフライト作成
     ├── ui_flights.py          # 対話的なフライト UI
-    ├── briefing.py            # ブリーフィングシート
-    ├── eval_sheet.py          # 評価シート
-    └── selftest.py            # 内蔵の動作診断
+    ├── briefing.py              # ブリーフィングシート
+    ├── eval_sheet.py            # 評価シート
+    ├── templates.py             # フライトテンプレートの保存と一覧
+    ├── v2_features.py           # /dashboard /export /search /poll などの v2 機能
+    └── selftest.py              # 内蔵の動作診断
 ```
 
 ## 設定
@@ -124,6 +133,21 @@ EMBED_COLOR   = cfg("colors.primary", 0x1B3444)
 - サンプル設定の絵文字は空です。独自のカスタム絵文字
   （例: `"<:name:1234567890>"`）を設定するか、空のままにすると内蔵の
   Unicode 絵文字が使われます。
+
+## 公開サイト（GitHub Pages）
+
+英語のランディングページ（特徴・クイックスタート・コマンド一覧・
+色と絵文字の設定）を `docs/` に同梱しています。公開手順:
+
+1. GitHub のリポジトリで **Settings → Pages** を開く
+2. **Source** で "Deploy from a branch" を選ぶ
+3. Branch: `main` / Folder: `/docs` を指定して Save
+
+数分後に `https://<ユーザー名>.github.io/<リポジトリ名>/` で公開されます。
+
+> push の前に `docs/index.html` と README 内の `your-org/flight-hub`
+> を、実際のリポジトリ（`オーナー/リポジトリ名`）に置き換えてください。
+> `docs/.nojekyll` があるので Jekyll の変換は行われず、HTML がそのまま配信されます。
 
 ## コントリビュート
 

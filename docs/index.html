@@ -1,0 +1,408 @@
+<!doctype html>
+<!--
+  Flight Hub - public site.
+  Hosted by GitHub Pages from the docs/ folder.
+  Replace "your-org/flight-hub" with your repository owner/name when you publish.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flight Hub — an open source flight operations bot for Discord</title>
+<meta name="description" content="Flight Hub is a fully open source Discord bot for flight servers: flight creation, staff signups, briefing sheets, flight logs, surveys and dashboards. MIT licensed, no hardcoded IDs.">
+<meta property="og:title" content="Flight Hub">
+<meta property="og:description" content="An open source flight operations hub for Discord. v2 — MIT licensed.">
+<meta property="og:type" content="website">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#top">
+      <span class="mark">&#9992;&#65039;</span>
+      Flight Hub
+      <span class="ver">v2</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#quickstart">Quick start</a>
+      <a href="#commands">Commands</a>
+      <a href="#appearance">Appearance</a>
+      <a href="#docs">Docs</a>
+      <a href="https://github.com/your-org/flight-hub">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <section class="hero">
+    <div class="section-inner">
+      <p class="eyebrow">Open source &middot; MIT licensed</p>
+      <h1>The flight operations hub<br>for your <span>Discord</span> server</h1>
+      <p class="lead">
+        Flight Hub runs the whole flight cycle: applications, staff recruitment,
+        calendar events, briefing sheets, flight logs, surveys and dashboards.
+        Fully open source, no hardcoded IDs, and it works with the emoji Discord
+        already ships.
+      </p>
+      <div class="badges">
+        <img src="https://img.shields.io/badge/version-v2-5aa9e6" alt="Version v2">
+        <img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="Python 3.11+">
+        <img src="https://img.shields.io/badge/discord.py-2.7%2B-5865F2" alt="discord.py 2.7+">
+        <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license">
+      </div>
+      <div class="cta">
+        <a class="btn btn-primary" href="#quickstart">Get started</a>
+        <a class="btn btn-ghost" href="https://github.com/your-org/flight-hub">View on GitHub</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="features">
+    <div class="section-inner">
+      <p class="eyebrow">Features</p>
+      <h2>Everything a flight server needs</h2>
+      <p class="lead">One bot, one config file, 71 slash commands.</p>
+
+      <div class="grid grid-3">
+        <div class="card">
+          <span class="icon">&#9992;&#65039;</span>
+          <h3>Flight creation</h3>
+          <p>Templates, custom flights, private flights and native Discord
+             repeating events. Codes, routes and aircraft are picked from
+             autocompletes, never typed by hand.</p>
+        </div>
+        <div class="card">
+          <span class="icon">&#128101;</span>
+          <h3>Staff signups</h3>
+          <p>Recruitment cards per department (flight crew, cabin, airport,
+             ground). Positions are assigned automatically up to the minimum
+             staffing, with backfill requests when a slot is empty.</p>
+        </div>
+        <div class="card">
+          <span class="icon">&#128225;</span>
+          <h3>Customer announcements</h3>
+          <p>A formatted announcement in your customer server, with the check-in
+             time, server lock, event link and mention roles. Private flights
+             stay staff-only.</p>
+        </div>
+        <div class="card">
+          <span class="icon">&#128203;</span>
+          <h3>Briefing &amp; flight logs</h3>
+          <p>Assign crews with a briefing sheet, run a readiness checklist, then
+             send a flight log with per-department ratings, absentees and
+             comments.</p>
+        </div>
+        <div class="card">
+          <span class="icon">&#128269;</span>
+          <h3>Surveys &amp; evaluations</h3>
+          <p>DM surveys and evaluation sheets with button ratings and comments,
+             scheduled or on demand, with results archived for statistics.</p>
+        </div>
+        <div class="card">
+          <span class="icon">&#128202;</span>
+          <h3>Stats &amp; dashboards</h3>
+          <p>Route history, staff participation leaderboards, activity graphs,
+             and a one-card <code>/dashboard</code> of upcoming flights and
+             configuration health.</p>
+        </div>
+        <div class="card">
+          <span class="icon">&#9881;&#65039;</span>
+          <h3>Guided setup</h3>
+          <p><code>/setup</code> detects channels and roles by name, saves
+             everything to <code>config/config.json</code>, and lets you pick
+             every colour and emoji from inside Discord.</p>
+        </div>
+        <div class="card">
+          <span class="icon">&#128737;&#65039;</span>
+          <h3>Safe by default</h3>
+          <p>Backups of the flight log are posted to a backup channel and can be
+             restored in one command. A <code>/selftest</code> command checks the
+             whole installation.</p>
+        </div>
+        <div class="card">
+          <span class="icon">&#127918;</span>
+          <h3>Test server mode</h3>
+          <p>Create throwaway flights on a test server and category, so new staff
+             can learn the workflow without touching your customers.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="quickstart">
+    <div class="section-inner">
+      <p class="eyebrow">Quick start</p>
+      <h2>Running in five minutes</h2>
+      <p class="lead">Python 3.11 or newer and a Discord application token are all you need.</p>
+
+      <ol class="steps">
+        <li>
+          <h3>Get the code</h3>
+          <p>Fork or download the repository, then move into it.</p>
+          <pre><code>git clone https://github.com/your-org/flight-hub.git Flight-Hub
+cd Flight-Hub</code></pre>
+        </li>
+        <li>
+          <h3>Install the dependencies</h3>
+          <p>A virtual environment keeps your system Python clean.</p>
+          <pre><code>python -m venv venv
+# Windows
+venv\Scripts\activate
+# Linux / macOS
+source venv/bin/activate
+
+pip install -r requirements.txt</code></pre>
+        </li>
+        <li>
+          <h3>Add your bot token</h3>
+          <p>Copy the example file and paste the token of your Discord application.
+             The token is only read from this file, never from the code.</p>
+          <pre><code>cp .env.example .env
+# Windows: copy .env.example .env
+# then edit .env and set DISCORD_BOT_TOKEN</code></pre>
+        </li>
+        <li>
+          <h3>Start the bot</h3>
+          <pre><code>python run.py</code></pre>
+        </li>
+        <li>
+          <h3>Run <code>/setup</code> on your staff server</h3>
+          <p>Pick the staff and customer servers, auto-detect the channels and
+             roles by name, choose your colours and emojis, then press
+             <strong>Save &amp; finish</strong> and restart the bot once.</p>
+        </li>
+      </ol>
+
+      <div class="callout">
+        Full walkthrough, including the channel and role names the auto-detection
+        looks for, is in the <a href="https://github.com/your-org/flight-hub/blob/main/docs/SETUP.md">setup guide</a> (Japanese).
+      </div>
+    </div>
+  </section>
+
+  <section id="appearance">
+    <div class="section-inner">
+      <p class="eyebrow">Appearance</p>
+      <h2>Make it look like your server</h2>
+      <p class="lead">
+        Both the colours and the emoji are configuration, not code. Change them
+        from <code>/setup</code> and they apply to the running bot immediately.
+      </p>
+
+      <h3 style="margin-top:26px">Colours</h3>
+      <div class="swatches">
+        <div class="swatch"><div class="chip" style="background:#1B3444"></div><div class="meta"><strong>Primary</strong><span>#1B3444 &middot; main embeds</span></div></div>
+        <div class="swatch"><div class="chip" style="background:#808080"></div><div class="meta"><strong>Private</strong><span>#808080 &middot; staff-only flights</span></div></div>
+        <div class="swatch"><div class="chip" style="background:#2ECC71"></div><div class="meta"><strong>Success</strong><span>#2ECC71</span></div></div>
+        <div class="swatch"><div class="chip" style="background:#F1C40F"></div><div class="meta"><strong>Warning</strong><span>#F1C40F</span></div></div>
+        <div class="swatch"><div class="chip" style="background:#E74C3C"></div><div class="meta"><strong>Danger</strong><span>#E74C3C</span></div></div>
+        <div class="swatch"><div class="chip" style="background:#3498DB"></div><div class="meta"><strong>Info</strong><span>#3498DB</span></div></div>
+      </div>
+
+      <h3 style="margin-top:34px">Emoji</h3>
+      <p class="lead">
+        Sixteen emoji can be swapped, and every one of them already has a stock
+        Unicode fallback — so the bot looks right even before you touch anything.
+        Paste a Unicode emoji or a custom one (<code>&lt;:name:id&gt;</code>).
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Setting</th><th>Used for</th><th>Default</th></tr></thead>
+          <tbody>
+            <tr><td><code>check</code> <code>x</code> <code>noti</code></td><td>Status marks and notification lines</td><td>&#9989; &#10060; &#128276;</td></tr>
+            <tr><td><code>info</code> <code>search</code> <code>link</code></td><td>Info cards, lookups, event links</td><td>&#8505;&#65039; &#128269; &#128279;</td></tr>
+            <tr><td><code>baggage</code> <code>tail</code> <code>brand</code></td><td>Announcement headings</td><td>&#129522; &#9992;&#65039; &#9992;&#65039;</td></tr>
+            <tr><td><code>flight_approved</code></td><td>The approve button on applications</td><td>&#9989; (custom emoji optional)</td></tr>
+            <tr><td><code>signup_type.flight</code> <code>.custom</code></td><td>Recruitment card heading</td><td>&#9992;&#65039; &#128736;&#65039;</td></tr>
+            <tr><td><code>signup_type.test</code> <code>.recurring</code></td><td>Recruitment card heading</td><td>&#129514; &#128257;</td></tr>
+            <tr><td><code>signup_type.private</code> <code>.gamenight</code></td><td>Recruitment card heading</td><td>&#128274; &#127918;</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="commands">
+    <div class="section-inner">
+      <p class="eyebrow">Commands</p>
+      <h2>All 71 slash commands</h2>
+      <p class="lead">Filter as you type.</p>
+      <input class="filter" id="cmd-filter" type="search" placeholder="Filter commands… (e.g. flight, poll, admin)" aria-label="Filter commands">
+      <p class="filter-count" id="cmd-count"></p>
+
+      <div class="table-wrap">
+        <table id="cmd-table">
+          <thead><tr><th>Command</th><th>What it does</th><th>Who</th></tr></thead>
+          <tbody>
+            <tr><td><code>/setup</code></td><td>Configure servers, channels, roles, colours and emoji</td><td><span class="tag admin">Admin</span></td></tr>
+            <tr><td><code>/about</code></td><td>About this open source bot</td><td><span class="tag">Everyone</span></td></tr>
+            <tr><td><code>/help</code></td><td>Command help by category</td><td><span class="tag">Everyone</span></td></tr>
+
+            <tr><td><code>/create_flight</code></td><td>Create a flight from a saved template</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/create_custom_flight</code></td><td>Create a completely custom flight (image required)</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/create_private_flight</code></td><td>Staff-only flight, no customer notice, grey card</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/create_private_flight_template</code></td><td>Staff-only flight from a template</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/recurring_flight</code></td><td>Recurring flight as a native repeating Discord event</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/duplicate_flight</code></td><td>Copy a flight to another date and time</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/flight_app</code></td><td>Apply to host a flight</td><td><span class="tag">Everyone</span></td></tr>
+            <tr><td><code>/dispatch_app</code></td><td>Turn your approved application into a live recruitment</td><td><span class="tag">Everyone</span></td></tr>
+            <tr><td><code>/suggest_flight</code></td><td>Random flight suggestion you can apply for directly</td><td><span class="tag">Everyone</span></td></tr>
+
+            <tr><td><code>/flights</code></td><td>List the active flights</td><td><span class="tag">Everyone</span></td></tr>
+            <tr><td><code>/publish_schedule</code></td><td>Republish the schedule message</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/briefing</code></td><td>Send a briefing sheet and assign staff</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/edit_briefing</code></td><td>Edit a briefing sheet that was already sent</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/checklist</code></td><td>Check that a flight is ready to depart</td><td><span class="tag">Everyone</span></td></tr>
+            <tr><td><code>/delay</code></td><td>Announce a delay</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/cancel</code></td><td>Announce a cancellation</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/close_signup</code></td><td>Close or reopen signups early</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/request_staff</code></td><td>Ask for backup staff in a missing position</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/find_staff</code></td><td>Find flights where a position is still open</td><td><span class="tag">Everyone</span></td></tr>
+            <tr><td><code>/host_change</code></td><td>Hand a flight over to another host</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/undo</code></td><td>Undo the most recent host change</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/event_thread</code></td><td>Create the signup thread manually</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/update_ui</code></td><td>Refresh every message and event image from the database</td><td><span class="tag staff">Staff</span></td></tr>
+
+            <tr><td><code>/flight_log</code></td><td>Send the flight log with crew ratings</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/editflightlog</code></td><td>Edit a flight log that was already sent</td><td><span class="tag admin">Admin</span></td></tr>
+            <tr><td><code>/manual_log</code></td><td>Enter past flights by hand</td><td><span class="tag admin">Admin</span></td></tr>
+            <tr><td><code>/flight_backup</code></td><td>Add staff who are missing from a flight log</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/route_stats</code></td><td>History of a route: flights flown, average crew</td><td><span class="tag">Everyone</span></td></tr>
+            <tr><td><code>/aircraft_guide</code></td><td>Guide for an aircraft and the routes it flies</td><td><span class="tag">Everyone</span></td></tr>
+            <tr><td><code>/staff_profile</code></td><td>A staff member's participation and role stats</td><td><span class="tag">Everyone</span></td></tr>
+            <tr><td><code>/leaderboard</code></td><td>Participation leaderboard</td><td><span class="tag">Everyone</span></td></tr>
+            <tr><td><code>/inactive_staff</code></td><td>Staff with no flights in the last month</td><td><span class="tag admin">Admin</span></td></tr>
+            <tr><td><code>/flight_stats_graph</code></td><td>Activity graph of the last flights</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/send_evaluation</code></td><td>Send or schedule evaluation sheets</td><td><span class="tag staff">Staff</span></td></tr>
+
+            <tr><td><code>/dashboard</code></td><td>One-card overview of flights, signups and configuration</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/export</code></td><td>Export the flight log as CSV or JSON</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/search</code></td><td>Search flights by code, route or aircraft</td><td><span class="tag">Everyone</span></td></tr>
+            <tr><td><code>/poll</code></td><td>Button poll with live results</td><td><span class="tag">Everyone</span></td></tr>
+            <tr><td><code>/onduty</code></td><td>Toggle your on-duty role</td><td><span class="tag">Everyone</span></td></tr>
+            <tr><td><code>/news</code></td><td>Schedule an announcement</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/news_list</code></td><td>List or cancel scheduled announcements</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/flight_dashboard</code></td><td>Current and upcoming flights for managers</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/staff_analytics</code></td><td>Aggregate participation analytics (30 days)</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/healthcheck</code></td><td>Bot, data load and backup channel health</td><td><span class="tag staff">Staff</span></td></tr>
+
+            <tr><td><code>/create_flighttest</code></td><td>Test-server flight</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/recurring_flighttest</code></td><td>Test-server recurring flight</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/test_admin</code></td><td>Toggle isolated test mode</td><td><span class="tag admin">Admin</span></td></tr>
+            <tr><td><code>/test_evaluate</code></td><td>Evaluate every command run in test mode</td><td><span class="tag admin">Admin</span></td></tr>
+            <tr><td><code>/test_progress</code></td><td>Visual test coverage and progress</td><td><span class="tag">Everyone</span></td></tr>
+
+            <tr><td><code>/manage_templates</code></td><td>List and delete flight templates</td><td><span class="tag admin">Admin</span></td></tr>
+            <tr><td><code>/manual_assign</code></td><td>Mark someone as attending or not</td><td><span class="tag admin">Admin</span></td></tr>
+            <tr><td><code>/remind</code></td><td>DM staff who have not flown this month</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/remind_status</code></td><td>Who already received the reminder</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/loa</code></td><td>Leave of absence management</td><td><span class="tag">Everyone</span></td></tr>
+            <tr><td><code>/join</code></td><td>Read chat aloud in a voice channel</td><td><span class="tag">Everyone</span></td></tr>
+            <tr><td><code>/aps</code></td><td>Download a user's message history</td><td><span class="tag admin">Admin</span></td></tr>
+            <tr><td><code>/backupflight</code></td><td>Recreate a deleted calendar event</td><td><span class="tag admin">Admin</span></td></tr>
+            <tr><td><code>/flight_app_backup</code></td><td>Convert an old text application</td><td><span class="tag admin">Admin</span></td></tr>
+            <tr><td><code>/clear_logs</code></td><td>Prune old flight data safely</td><td><span class="tag admin">Admin</span></td></tr>
+            <tr><td><code>/restore</code></td><td>Preview and restore the flight log from a backup</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/restore_from_message</code></td><td>Force a restore from a message id</td><td><span class="tag admin">Admin</span></td></tr>
+            <tr><td><code>/selftest</code></td><td>Run a full self-diagnostic</td><td><span class="tag admin">Admin</span></td></tr>
+            <tr><td><code>/setup_em_permissions</code></td><td>Reset event-manager command visibility</td><td><span class="tag admin">Admin</span></td></tr>
+            <tr><td><code>/update</code></td><td>Reload, validate and migrate saved data</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/up</code></td><td>Pull the latest code and restart</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/restart</code></td><td>Restart the bot</td><td><span class="tag admin">Admin</span></td></tr>
+            <tr><td><code>/staff_gamenight</code></td><td>Create a staff-only game night</td><td><span class="tag staff">Staff</span></td></tr>
+            <tr><td><code>/edit_gamenight</code></td><td>Edit a staff-only game night</td><td><span class="tag staff">Staff</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        Command permissions are enforced at runtime as well as by Discord, so a
+        locked-down command stays locked even if the integration permissions are
+        misconfigured. The full list with Japanese explanations is in
+        <a href="https://github.com/your-org/flight-hub/blob/main/docs/COMMANDS.md">docs/COMMANDS.md</a>.
+      </div>
+    </div>
+  </section>
+
+  <section id="docs">
+    <div class="section-inner">
+      <p class="eyebrow">Documentation</p>
+      <h2>Read further</h2>
+      <div class="grid grid-2">
+        <div class="card">
+          <h3><a href="https://github.com/your-org/flight-hub/blob/main/docs/SETUP.md">Setup guide</a></h3>
+          <p>Step-by-step installation, the channel and role names the auto-detection
+             looks for, and manual configuration (Japanese).</p>
+        </div>
+        <div class="card">
+          <h3><a href="https://github.com/your-org/flight-hub/blob/main/docs/COMMANDS.md">Command reference</a></h3>
+          <p>Every command with a short explanation (Japanese).</p>
+        </div>
+        <div class="card">
+          <h3><a href="https://github.com/your-org/flight-hub/blob/main/CHANGELOG.md">Changelog</a></h3>
+          <p>What changed in each release, following Keep a Changelog (Japanese).</p>
+        </div>
+        <div class="card">
+          <h3><a href="https://github.com/your-org/flight-hub/blob/main/CONTRIBUTING.md">Contributing</a></h3>
+          <p>Development setup, coding rules and the pull request checklist (Japanese).</p>
+        </div>
+        <div class="card">
+          <h3><a href="https://github.com/your-org/flight-hub/blob/main/README.md">README</a></h3>
+          <p>The repository readme, with the project layout and requirements (Japanese).</p>
+        </div>
+        <div class="card">
+          <h3><a href="https://github.com/your-org/flight-hub/blob/main/SECURITY.md">Security</a></h3>
+          <p>How to report a vulnerability privately (Japanese).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div>
+      <strong>Flight Hub</strong> v2 &middot; an open source flight operations bot for Discord.<br>
+      Released under the <a href="https://github.com/your-org/flight-hub/blob/main/LICENSE">MIT License</a> &middot; &copy; 2026 Flight Hub contributors.
+    </div>
+    <nav>
+      <a href="https://github.com/your-org/flight-hub">GitHub</a>
+      <a href="https://github.com/your-org/flight-hub/blob/main/docs/SETUP.md">Setup</a>
+      <a href="https://github.com/your-org/flight-hub/blob/main/docs/COMMANDS.md">Commands</a>
+      <a href="https://github.com/your-org/flight-hub/blob/main/CHANGELOG.md">Changelog</a>
+      <a href="https://github.com/your-org/flight-hub/blob/main/CONTRIBUTING.md">Contributing</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var input = document.getElementById('cmd-filter');
+  var count = document.getElementById('cmd-count');
+  var rows = Array.prototype.slice.call(
+    document.querySelectorAll('#cmd-table tbody tr'));
+
+  function apply() {
+    var q = input.value.trim().toLowerCase();
+    var shown = 0;
+    rows.forEach(function (row) {
+      var hit = !q || row.textContent.toLowerCase().indexOf(q) !== -1;
+      row.style.display = hit ? '' : 'none';
+      if (hit) { shown++; }
+    });
+    count.textContent = q ? (shown + ' of ' + rows.length + ' commands')
+                           : (rows.length + ' commands');
+  }
+
+  input.addEventListener('input', apply);
+  apply();
+})();
+</script>
+
+</body>
+</html>

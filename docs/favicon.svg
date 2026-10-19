@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Flight Hub">
+  <rect width="64" height="64" rx="14" fill="#1B3444"/>
+  <path d="M32 10c2.2 0 3.6 2.4 3.6 6.2v9.4l16.4 9.3v4.6l-16.4-5.1v10.4l5.2 3.6v3.6L32 48.4l-8.8 3.6v-3.6l5.2-3.6V34.4L12 39.5v-4.6l16.4-9.3v-9.4C28.4 12.4 29.8 10 32 10z"
+        fill="#7CC0F5"/>
+</svg>
