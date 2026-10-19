@@ -1,0 +1,25 @@
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Python caches / build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+
+# Environment / secrets
+.env
+config/config.json
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flight-hub"
+version = "1.0.0"
+description = "An open-source flight-operations bot for Discord."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Flight Hub contributors" }]
+keywords = ["discord", "discord.py", "bot", "aviation", "flight-operations"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Communications :: Chat",
+]
+dependencies = [
+    "discord.py>=2.7.1",
+    "aiohttp>=3.9",
+    "matplotlib>=3.8",
+    "edge-tts>=7.0",
+    "gTTS>=2.5",
+    "deep-translator>=1.11.4",
+    "PyNaCl>=1.5.0",
+    "davey>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/your-org/flight-hub"
+Issues = "https://github.com/your-org/flight-hub/issues"
+Changelog = "https://github.com/your-org/flight-hub/blob/main/CHANGELOG.md"
+
+[project.scripts]
+flight-hub = "flighthub.core:start"
+
+[tool.setuptools]
+packages = ["flighthub"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = ["E501"]

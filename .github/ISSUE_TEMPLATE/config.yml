@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: セットアップガイド
+    url: https://github.com/your-org/flight-hub/blob/main/docs/SETUP.md
+    about: Flight Hub のインストールと設定の手順を説明しています。
+  - name: discord.py のドキュメント
+    url: https://discordpy.readthedocs.io/
+    about: Flight Hub が利用している discord.py ライブラリのリファレンスです。

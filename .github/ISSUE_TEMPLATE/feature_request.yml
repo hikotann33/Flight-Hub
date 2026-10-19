@@ -1,0 +1,30 @@
+name: 機能要望
+description: Flight Hub への機能追加・改善を提案する
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提案ありがとうございます。まず既存の Issue を検索してください。
+  - type: textarea
+    id: solution
+    attributes:
+      label: 提案する内容
+      description: どのような機能・改善を希望するかを書いてください。
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 検討した代替案
+      description: 他に検討した方法があれば書いてください。
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: 補足情報
+      description: スクリーンショットや参考リンクなどがあれば添付してください。
+    validations:
+      required: false
