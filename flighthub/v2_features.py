@@ -1,16 +1,3 @@
-"""Flight Hub V2 feature set.
-
-Commands added in V2.0: ``/dashboard``, ``/export``, ``/search``, ``/poll``,
-``/onduty``, ``/news`` and ``/news_list``.
-
-The polling and scheduling state lives next to the other bot caches in
-``core.POLL_CACHE`` / ``core.NEWS_CACHE`` so it is persisted through the
-regular ``misc_data.json`` backup channel.
-
-The helpers in this module are pure functions (they never touch Discord) so
-they can be unit tested without a live connection.
-"""
-
 import csv
 import datetime
 import io
@@ -42,13 +29,9 @@ def _now_ts():
 
 
 def notice_card(title, body):
-    """Ephemeral card used for every "something went wrong" reply."""
     return C.build_v2_card(title, [(None, body)])
 
 
-# ---------------------------------------------------------------------------
-# Flight helpers
-# ---------------------------------------------------------------------------
 
 def upcoming_flights(flights=None, now=None):
     flights = C.FLIGHT_LOG_CACHE if flights is None else flights
@@ -79,7 +62,6 @@ def _flight_search_text(flight):
 
 
 def filter_flights(query="", scope="all", limit=25, flights=None, now=None):
-    """Return flights matching *query* inside *scope*, newest first when possible."""
     flights = C.FLIGHT_LOG_CACHE if flights is None else flights
     now = _now_ts() if now is None else now
 
@@ -110,9 +92,6 @@ def flight_line(flight):
     return f"`{code}` {route} | {when}"
 
 
-# ---------------------------------------------------------------------------
-# Dashboard
-# ---------------------------------------------------------------------------
 
 def dashboard_stats(flights=None, now=None):
     flights = C.FLIGHT_LOG_CACHE if flights is None else flights
@@ -157,9 +136,6 @@ def dashboard_sections(stats):
     ]
 
 
-# ---------------------------------------------------------------------------
-# Export
-# ---------------------------------------------------------------------------
 
 CSV_COLUMNS = [
     "flight_code", "origin", "destination", "equipment", "classes", "airline",
@@ -213,12 +189,8 @@ def flights_to_json(rows):
     return json.dumps(rows, ensure_ascii=False, indent=2, default=str)
 
 
-# ---------------------------------------------------------------------------
-# Polls
-# ---------------------------------------------------------------------------
 
 def parse_poll_options(raw):
-    """Split poll input into options. ``|`` and ``,`` are both accepted."""
     text = (raw or "").replace("|", ",")
     return [part.strip() for part in text.split(",") if part.strip()]
 
@@ -277,13 +249,6 @@ class PollCloseButton(discord.ui.Button):
 
 
 class PollView(discord.ui.View):
-    """Persistent view.
-
-    ``option_count=None`` renders every possible button and is what gets
-    registered on startup so any earlier poll keeps accepting votes after a
-    restart; commands pass an explicit count so the posted message only shows
-    the options that actually exist.
-    """
 
     def __init__(self, option_count: int = None):
         super().__init__(timeout=None)
@@ -384,9 +349,6 @@ def due_polls(polls, now=None):
     return result
 
 
-# ---------------------------------------------------------------------------
-# Scheduled announcements
-# ---------------------------------------------------------------------------
 
 def news_due(items, now=None):
     now = _now_ts() if now is None else now
@@ -398,7 +360,6 @@ def news_due(items, now=None):
 
 
 def prune_news(items, now=None, keep=MAX_NEWS_ITEMS):
-    """Keep recent entries only so the cache cannot grow without bound."""
     now = _now_ts() if now is None else now
     cutoff = now - 7 * DAY_SECONDS
     items = [i for i in (items or []) if i]
@@ -470,9 +431,6 @@ async def v2_maintenance_loop():
         traceback.print_exc()
 
 
-# ---------------------------------------------------------------------------
-# Commands
-# ---------------------------------------------------------------------------
 
 @C.client.tree.command(name="dashboard", description="Show an overview of flights, signups and configuration.")
 async def dashboard_cmd(interaction: discord.Interaction):
@@ -732,7 +690,6 @@ async def news_list_cmd(interaction: discord.Interaction, id: str = ""):
 
 
 def register(client=None):
-    """Hook the persistent view and the background loop (used by on_ready)."""
     target = client or C.client
     try:
         target.add_view(PollView())

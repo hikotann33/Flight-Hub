@@ -75,10 +75,6 @@ CORE_BINDINGS = [
     ("roles.profile_export", "LOG_COPY_ROLE_ID"),
 ]
 
-# ---------------------------------------------------------------------------
-# Appearance: colours and emojis (all configurable, all defaulting to
-# stock Unicode emoji so the bot works with no custom emoji at all).
-# ---------------------------------------------------------------------------
 
 COLOR_KEYS = ("primary", "private", "success", "warning", "danger", "info")
 
@@ -174,8 +170,6 @@ def load():
                 data = json.load(handle) or {}
         except (OSError, ValueError):
             data = {}
-    # deepcopy so the live config never shares nested dicts with DEFAULTS:
-    # editing a colour in the wizard must not rewrite the built-in default.
     return _deep_merge(copy.deepcopy(DEFAULTS), data)
 
 
@@ -237,15 +231,8 @@ def apply_to_core(core_module):
     return applied
 
 
-# ---------------------------------------------------------------------------
-# Appearance helpers
-# ---------------------------------------------------------------------------
 
 def parse_hex_color(text):
-    """Parse ``#RRGGBB`` / ``RRGGBB`` / ``0xRRGGBB`` into an RGB int.
-
-    Returns None when the text is not a valid 6 digit hex colour.
-    """
     raw = str(text or "").strip()
     if not raw:
         return None
@@ -258,7 +245,6 @@ def parse_hex_color(text):
 
 
 def format_hex_color(value):
-    """Render a stored colour value as ``#RRGGBB``."""
     try:
         return "#%06X" % (int(value) & 0xFFFFFF)
     except (TypeError, ValueError):
@@ -266,14 +252,6 @@ def format_hex_color(value):
 
 
 def parse_emoji_value(text, as_id=False):
-    """Normalise an emoji pasted by a user.
-
-    Accepts a Unicode emoji (``✅``) or a custom emoji (``<:name:123456789012345678>``,
-    ``<a:name:123456789012345678>``). With ``as_id=True`` only a custom emoji (or a
-    bare numeric id) is accepted and its id is returned.
-
-    Returns ``(value, error)``. ``(None, None)`` means "reset to the default".
-    """
     raw = str(text or "").strip()
     if not raw:
         return None, None
@@ -292,7 +270,6 @@ def parse_emoji_value(text, as_id=False):
 
 
 def current_emoji(key):
-    """The emoji string now in effect for a plain ``emojis.<key>`` setting."""
     if key == "flight_approved":
         emoji_id = cfg("emojis.flight_approved")
         return f"<:ch:{emoji_id}>" if emoji_id else DEFAULT_FLIGHT_APPROVED
@@ -300,7 +277,6 @@ def current_emoji(key):
 
 
 def current_signup_icon(key):
-    """The emoji string now in effect for a ``emojis.signup_type.<key>`` icon."""
     icons = dict(DEFAULT_SIGNUP_TYPE_ICONS)
     for name, value in (cfg("emojis.signup_type") or {}).items():
         if value and name in icons:
@@ -309,7 +285,6 @@ def current_signup_icon(key):
 
 
 def reset_emoji(key):
-    """Clear a single emoji setting back to its default."""
     if key == "flight_approved":
         return set_value("emojis.flight_approved", None)
     if key in DEFAULT_SIGNUP_TYPE_ICONS:
@@ -318,23 +293,14 @@ def reset_emoji(key):
 
 
 def reset_all_emojis():
-    """Clear every emoji setting (and the signup-type icons) back to defaults."""
     set_value("emojis", {})
 
 
 def reset_colors():
-    """Restore every colour to the built-in default."""
     set_value("colors", dict(DEFAULTS["colors"]))
 
 
 def apply_ui_to_core(core_module):
-    """Push the configured colours and emojis into an imported core module.
-
-    Everything here is read at call time, so a running bot picks the new values
-    up immediately. The only exception is the approve button of
-    ``/flight_app`` (bound when the persistent view is registered), which needs
-    a restart.
-    """
     applied = []
     if core_module is None:
         return applied

@@ -198,12 +198,12 @@ BRAND_FOOTER = cfg("brand.footer", "Flight Hub")
 BRAND_AIRLINE = cfg("brand.airline", "Airline")
 
 SIGNUP_TYPE_ICON = cfg("emojis.signup_type", {
-    "flight":    "\u2708\ufe0f",  # airplane
-    "custom":    "\U0001f6e0\ufe0f",  # hammer and wrench
-    "test":      "\U0001f9ea",    # test tube
-    "recurring": "\U0001f501",    # repeat
-    "private":   "\U0001f512",    # lock
-    "gamenight": "\U0001f3ae",    # video game
+    "flight":    "\u2708\ufe0f",
+    "custom":    "\U0001f6e0\ufe0f",
+    "test":      "\U0001f9ea",
+    "recurring": "\U0001f501",
+    "private":   "\U0001f512",
+    "gamenight": "\U0001f3ae",
 })
 
 

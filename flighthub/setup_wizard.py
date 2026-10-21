@@ -117,15 +117,11 @@ class CustomerGuildSelect(discord.ui.Select):
             view=SetupPanel(interaction.user.id))
 
 
-# ---------------------------------------------------------------------------
-# Appearance: colours and emojis (everything here is applied live)
-# ---------------------------------------------------------------------------
 
 _RESTART_NOTE = ("Changes take effect immediately. Controls that were built at "
                  "startup - such as the approve button of `/flight_app` - need a "
                  "bot restart.")
 
-# A Discord modal holds at most five inputs, so the six colours are split.
 COLOR_GROUPS = {
     "main": ("primary", "private"),
     "status": ("success", "warning", "danger", "info"),
@@ -133,7 +129,6 @@ COLOR_GROUPS = {
 
 
 def color_panel_embeds():
-    """A summary embed plus one colour swatch embed per setting."""
     lines = []
     for key in cs.COLOR_KEYS:
         value = cs.cfg(f"colors.{key}", cs.DEFAULTS["colors"][key])
@@ -163,7 +158,6 @@ def emoji_panel_embed():
 
 
 class OwnerView(discord.ui.View):
-    """A view that only the person who ran /setup may operate."""
 
     def __init__(self, author_id, timeout=600):
         super().__init__(timeout=timeout)
@@ -196,7 +190,6 @@ class ColorPanelView(OwnerView):
 
 
 class ColorModal(discord.ui.Modal):
-    """A modal edits at most five colours, so the six are split in two groups."""
 
     def __init__(self, author_id, keys):
         keys = list(keys)[:5]
