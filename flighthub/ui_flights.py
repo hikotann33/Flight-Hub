@@ -6,67 +6,6 @@ import uuid
 
 from . import core as C
 
-class ShiftRequestModal(discord.ui.Modal, title="Shift Request"):
-    first_choice = discord.ui.TextInput(
-        label="First Choice", 
-        placeholder="Captain, Receptionist, etc.", 
-        required=True
-    )
-    second_choice = discord.ui.TextInput(
-        label="Second Choice (optional)", 
-        placeholder="Any, etc.", 
-        required=False
-    )
-
-    def __init__(self, flight_code, user_id):
-        super().__init__()
-        self.flight_code = flight_code
-        self.user_id = user_id
-
-    async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
-        
-        async with C.global_json_lock:
-            target_idx = next((i for i, f in enumerate(C.FLIGHT_LOG_CACHE) if f["flight_code"] == self.flight_code), -1)
-            if target_idx == -1:
-                return await interaction.followup.send(ephemeral=True, view=C.build_v2_card('Notice', [(None, C.EMOJI_X_STR + ' Error: Flight not found.')]))
-            
-            flight = C.FLIGHT_LOG_CACHE[target_idx]
-
-            if C.staff_time_passed(flight):
-                return await interaction.followup.send(ephemeral=True, view=C.build_v2_card('Notice', [(None, C.STAFF_TIME_PASSED_MSG)]))
-            
-
-            flight.setdefault("shift_requests", {})
-            flight["shift_requests"][str(self.user_id)] = {
-                "first": self.first_choice.value,
-                "second": self.second_choice.value
-            }
-            
-
-            flight.setdefault("accepted_users", [])
-            flight.setdefault("declined_users", [])
-            
-            _is_new_join = self.user_id not in flight["accepted_users"]
-            if self.user_id not in flight["accepted_users"]:
-                flight["accepted_users"].append(self.user_id)
-            if self.user_id in flight["declined_users"]:
-                flight["declined_users"].remove(self.user_id)
-                
-            C.global_db_dirty = True
-
-        if _is_new_join:
-            C.client.loop.create_task(C.notify_host_of_join(flight, interaction.user, "accepted"))
-            
-
-        if s_ch := C.client.get_channel(flight["staff_channel_id"]):
-            try:
-                msg = await s_ch.fetch_message(flight["staff_message_id"])
-                await C.update_staff_embed_ui(msg, flight, interaction.guild)
-            except:
-                pass
-                
-        await interaction.followup.send(ephemeral=True, view=C.build_v2_card('Notice', [(None, C.EMOJI_CHECK_STR + ' Sign-up and shift request recorded!')]))
 
 class RemindConfirmView(discord.ui.View):
     def __init__(self, target_members, schedule_text, comment):

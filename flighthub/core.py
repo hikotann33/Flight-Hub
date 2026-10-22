@@ -21,7 +21,6 @@ except Exception:
     MyMemoryTranslator = None
 import asyncio
 import copy
-import calendar
 import random
 import uuid
 import sys
@@ -156,7 +155,6 @@ REFLECTION_CHANNEL_ID = cfg("channels.reflection")
 dm_message_cache = {}
 
 
-ALLOWED_ROLE_ID = cfg("roles.allowed")
 NOTIFICATION_ROLE_ID = cfg("roles.notification")
 JOIN_NOTIFICATION_ROLE_ID = cfg("roles.join_notification")
 
@@ -194,8 +192,6 @@ PRIVATE_FLIGHT_COLOR = cfg("colors.private", 0x808080)
 
 
 
-BRAND_FOOTER = cfg("brand.footer", "Flight Hub")
-BRAND_AIRLINE = cfg("brand.airline", "Airline")
 
 SIGNUP_TYPE_ICON = cfg("emojis.signup_type", {
     "flight":    "\u2708\ufe0f",
@@ -553,7 +549,6 @@ APP_EXPIRY_ACTION = "remind"
 
 FLIGHT_DB = {}
 FLIGHT_AUTOCOMPLETE_CACHE = []
-AIRCRAFT_LIST = []
 FLIGHT_LOG_CACHE = []
 
 
@@ -1312,7 +1307,6 @@ def check_command_visibility_roles(guild=None) -> list:
     if guild is None:
         return warns
     perm = EVENT_MANAGER_COMMAND_PERMISSION
-    allowed_ids = {ROLE_EVENT_MANAGERS, CHIEF_ROLE_ID}
     for rid, label in ((ROLE_EVENT_MANAGERS, "Event Managers"), (CHIEF_ROLE_ID, "Chief")):
         role = guild.get_role(rid)
         if role is None:
@@ -2650,14 +2644,13 @@ async def get_target_user(client_instance, target_str):
     return user
 
 async def update_db_cache(strict=False):
-    global FLIGHT_DB, FLIGHT_AUTOCOMPLETE_CACHE, AIRCRAFT_LIST
+    global FLIGHT_DB, FLIGHT_AUTOCOMPLETE_CACHE
     channel = client.get_channel(FLIGHT_INPUT_CHANNEL_ID)
     if not channel and strict:
         channel = await _get_channel_strict(FLIGHT_INPUT_CHANNEL_ID)
     if not channel:
         return
     temp_db = {}
-    temp_aircraft = set()
     try:
         messages = [msg async for msg in channel.history(limit=500)]
 
@@ -2698,7 +2691,6 @@ async def update_db_cache(strict=False):
 
             if flight_code and "equipment" in data:
                 equipment_name = data["equipment"]
-                temp_aircraft.add(equipment_name)
 
                 if flight_code not in temp_db:
                     temp_db[flight_code] = {"origin": data.get("origin", "Unknown"),
@@ -2748,7 +2740,6 @@ async def update_db_cache(strict=False):
 
         FLIGHT_DB = temp_db
         FLIGHT_AUTOCOMPLETE_CACHE = sorted(autocomplete_list, key=lambda x: x['value'])
-        AIRCRAFT_LIST = sorted(list(temp_aircraft))
         global _TEMPLATE_LAST_LOAD
         _TEMPLATE_LAST_LOAD = datetime.datetime.now().timestamp()
     except Exception as e:
@@ -3945,86 +3936,6 @@ async def set_member_attendance(flight: dict, uid: int, status: str):
             if uid in flight["accepted_users"]:
                 flight["accepted_users"].remove(uid)
         global_db_dirty = True
-
-
-class AssignStaffSelect(discord.ui.Select):
-
-    def __init__(self, flight, guild):
-        accepted = flight.get("accepted_users", []) or []
-        declined = flight.get("declined_users", []) or []
-        host_id = flight.get("host_id")
-        options = []
-
-        def _add(uid, emoji, name, desc, value):
-            if len(options) >= 25:
-                return False
-
-            label = f"{emoji} {name}" if emoji and len(f"{emoji} {name}") <= 100 else name
-            options.append(discord.SelectOption(label=label[:100], description=desc[:100], value=value))
-            return True
-
-
-        for uid in accepted:
-            if uid == host_id:
-                continue
-            m = guild.get_member(uid)
-            name = m.display_name if m else f"User {uid}"
-            if not _add(uid, EMOJI_CHECK_STR, name, "Change to Declined", f"dec:{uid}"):
-                break
-
-        for uid in declined:
-            if uid == host_id:
-                continue
-            m = guild.get_member(uid)
-            name = m.display_name if m else f"User {uid}"
-            if not _add(uid, EMOJI_X_STR, name, "Change to Accepted", f"acc:{uid}"):
-                break
-
-        others = [m for m in guild.members if not m.bot
-                  and m.id not in accepted and m.id not in declined and m.id != host_id]
-        others.sort(key=lambda m: (m.display_name or "").lower())
-        for m in others:
-            if not _add(m.id, "+", m.display_name, "Add as Accepted", f"acc:{m.id}"):
-                break
-
-        if not options:
-            options.append(discord.SelectOption(label="No staff found", value="NONE"))
-        super().__init__(placeholder="Select staff", min_values=1, max_values=1,
-                         options=options, custom_id="assign_staff_select")
-
-    async def callback(self, interaction: discord.Interaction):
-        if self.values[0] == "NONE":
-            return await interaction.response.defer()
-        action, uid = self.values[0].split(":", 1)
-        uid = int(uid)
-        view = self.view
-        flight = next((f for f in FLIGHT_LOG_CACHE if f.get("flight_code") == view.flight_code), None)
-        if flight is None:
-            return await interaction.response.send_message(
-                ephemeral=True, view=build_v2_card('Notice', [(None, 'Flight not found.')]))
-        target = "accept" if action == "acc" else "decline"
-        if interaction.user.id != flight.get("host_id") and not can_remote_assign(interaction.user):
-            return await interaction.response.send_message(
-                ephemeral=True, view=build_v2_card('Notice', [(None, 'No permission.')]))
-        await set_member_attendance(flight, uid, target)
-        if view.staff_message:
-            try:
-                await update_staff_embed_ui(view.staff_message, flight, interaction.guild)
-            except Exception:
-                pass
-        member = interaction.guild.get_member(uid)
-        name = member.display_name if member else f"User {uid}"
-        status_text = "Accepted" if target == "accept" else "Declined"
-        await interaction.response.edit_message(content=f"{EMOJI_CHECK_STR} {name} has been changed to **{status_text}**.", view=None)
-
-
-class AssignStaffControlView(discord.ui.View):
-
-    def __init__(self, flight, staff_message, guild):
-        super().__init__(timeout=300)
-        self.flight_code = flight.get("flight_code")
-        self.staff_message = staff_message
-        self.add_item(AssignStaffSelect(flight, guild))
 
 
 class FlightSignupView(discord.ui.View):
@@ -5803,7 +5714,6 @@ class HelpView(discord.ui.LayoutView):
             ]
             if en["params"] or ja["params"]:
                 en_params = "\n".join(f"`{name}` — {desc}" for name, desc in en["params"])
-                ja_params = "\n".join(f"`{name}` — {desc}" for name, desc in ja["params"])
                 sections.append(("Parameters", en_params.strip()))
             if en["note"] or ja["note"]:
                 sections.append(("Notes", en['note'].strip()))
@@ -5815,7 +5725,6 @@ class HelpView(discord.ui.LayoutView):
             en_lines.append(f"`{data['en']['title']}` — {data['en']['desc'][:90]}")
             ja_lines.append(f"`{data['ja']['title']}` — {data['ja']['desc'][:90]}")
         en_legend = f"[Admin] Chief only · [Manager] Event Managers & Chief · [Staff] all staff · [Test] test server only.\n{EMOJI_X_STR} = your role cannot run this command."
-        ja_legend = f"[Admin] Chief only · [Manager] Event Managers & Chief · [Staff] All staff · [Test] For testing.\n{EMOJI_X_STR} = You cannot run this with your permission."
         if self.lang == "en":
             return "Flight Hub Help", [
                 ("Your permission", self._permission_line()),
@@ -5985,8 +5894,6 @@ async def notify_host_of_join(flight: dict, member, status: str = "accepted"):
 FLIGHT_CHANNEL_CATEGORY_ID = cfg("channels.flight_channel_category")
 
 
-def flight_needs_briefing_first(item: dict) -> bool:
-    return not any(item.get(k) for k in ("is_private", "is_gamenight", "is_test"))
 
 
 def _flight_channel_names(code: str):
@@ -6579,38 +6486,6 @@ async def _survey_send_thanks(interaction, flight, uid):
             pass
 
 
-class SurveyLangItem(discord.ui.DynamicItem[discord.ui.Button],
-                     template=r"survey:l:(?P<code>[^:]+):(?P<uid>\d+):(?P<lang>en|ja)"):
-    def __init__(self, code, uid, lang):
-        self.code, self.uid, self.lang = str(code), int(uid), str(lang)
-        super().__init__(discord.ui.Button(
-            label="English",
-            style=discord.ButtonStyle.primary,
-            custom_id=f"survey:l:{self.code}:{self.uid}:{self.lang}"))
-
-    @classmethod
-    async def from_custom_id(cls, interaction, item, match, /):
-        return cls(match["code"], int(match["uid"]), match["lang"])
-
-    async def interaction_check(self, interaction):
-        if interaction.user.id != self.uid:
-            await interaction.response.send_message("This survey belongs to another member.", ephemeral=True)
-            return False
-        return True
-
-    async def callback(self, interaction):
-        flight = _find_survey_flight(self.code)
-        if flight is None:
-            return await interaction.response.send_message("This survey is no longer available.", ephemeral=True)
-        if _survey_deadline_passed(flight):
-            return await interaction.response.send_message(SURVEY_TEXT[self.lang]["closed"], ephemeral=True)
-        result = flight.setdefault("flight_survey_results", {}).setdefault(
-            str(self.uid), {"language": None, "ratings": {}})
-        result.setdefault("ratings", {})
-        if not result.get("completed_at"):
-            result["language"] = "en"
-        await _survey_send_thanks(interaction, flight, self.uid)
-        await _survey_save(flight)
 
 
 class SurveyRatingItem(discord.ui.DynamicItem[discord.ui.Button],
@@ -8869,34 +8744,6 @@ class EvaluationDMView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    def extract_data(self, embed: discord.Embed):
-
-        data = {"target_id": "0", "reviewer_name": "Unknown", "grade": "Unknown", "comments": "No feedback", "doc_link": ""}
-        if not embed: return data
-        
-        import re
-        if embed.description:
-            match = re.search(r'<@!?(\d+)>', embed.description)
-            if match: data['target_id'] = match.group(1)
-        
-
-
-
-        for fld in embed.fields:
-            name = fld.name or ""
-            lname = name.lower()
-            value = fld.value or ""
-            if ("sheet" in lname or "document" in lname):
-                link_match = re.search(r'\[.+?\]\((.+?)\)', value)
-                data['doc_link'] = link_match.group(1) if link_match else value
-            elif ("reviewer" in lname):
-                data['reviewer_name'] = value
-            elif ("grade" in lname):
-                data['grade'] = value.replace("**", "")
-            elif ("feedback" in lname or "comment" in lname):
-                data['comments'] = value
-        
-        return data
 
     def generate_embed(self, eval_data, lang="en"):
         target_mention = f"<@{eval_data['target_id']}>"
@@ -9293,8 +9140,6 @@ async def undo_cmd(interaction: discord.Interaction):
 
 
 
-_REMOTE_IMAGE_CACHE = {}
-_REMOTE_IMAGE_TTL = 3600
 
 
 
@@ -9302,27 +9147,6 @@ _REMOTE_IMAGE_TTL = 3600
 
 
 
-async def fetch_remote_image_bytes(url, timeout=4.0):
-    if not url:
-        return None
-    now = datetime.datetime.now().timestamp()
-    cached = _REMOTE_IMAGE_CACHE.get(url)
-    if cached and now - cached[1] < _REMOTE_IMAGE_TTL:
-        return cached[0]
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=timeout)) as resp:
-                if resp.status == 200:
-                    data = await resp.read()
-                    if data:
-                        _REMOTE_IMAGE_CACHE[url] = (data, now)
-                        if len(_REMOTE_IMAGE_CACHE) > 300:
-                            for key in list(_REMOTE_IMAGE_CACHE)[:100]:
-                                _REMOTE_IMAGE_CACHE.pop(key, None)
-                        return data
-    except Exception as e:
-        print(f"Remote image fetch error: {e}")
-    return cached[0] if cached else None
 
 
 
@@ -9842,8 +9666,6 @@ def start():
 
 
 
-from . import briefing
-from . import config_core
 from . import eval_sheet
 from . import flight_apps
 from . import log_survey
@@ -9856,5 +9678,3 @@ from . import admin_tools
 from . import v2_features
 if __name__ == "__main__":
     start()
-
-

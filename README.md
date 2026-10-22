@@ -105,7 +105,6 @@ Flight-Hub/
     ├── ops_features.py        # スタッフプロフィール・評価・LOA・統計
     ├── test_flight.py         # テストサーバー向けフライト作成
     ├── ui_flights.py          # 対話的なフライト UI
-    ├── briefing.py              # ブリーフィングシート
     ├── eval_sheet.py            # 評価シート
     ├── templates.py             # フライトテンプレートの保存と一覧
     ├── v2_features.py           # /dashboard /export /search /poll などの v2 機能

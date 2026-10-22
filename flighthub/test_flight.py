@@ -822,7 +822,7 @@ async def join_server(interaction: discord.Interaction, flight_code: str = None,
                 ephemeral=True)
         except Exception as e:
             _msg = str(e)
-            if "davey" in _msg or "PyNaCl" in _msg:
+            if "PyNaCl" in _msg:
                 return await interaction.followup.send(
                     "Voice libraries are missing.\n"
                     "Run `./venv/bin/pip install -r requirements.txt` and restart the bot.\n"

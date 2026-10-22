@@ -1,3 +1,4 @@
+import importlib.util
 import os
 import shutil
 import sys
@@ -19,14 +20,8 @@ def _banner():
 
 def _check_voice_dependencies():
     missing = []
-    try:
-        import nacl
-    except Exception:
+    if importlib.util.find_spec("nacl") is None:
         missing.append("PyNaCl")
-    try:
-        import davey
-    except Exception:
-        missing.append("davey")
     if shutil.which("ffmpeg") is None:
         try:
             import flighthub.core as _core

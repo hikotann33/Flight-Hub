@@ -57,7 +57,6 @@ CORE_BINDINGS = [
     ("channels.test_customer_category", "TEST_CUSTOMER_CATEGORY_ID"),
     ("channels.test_staff", "TEST_STAFF_CHANNEL_ID"),
     ("channels.selftest_customer_category", "SELFTEST_CUSTOMER_CATEGORY_ID"),
-    ("roles.allowed", "ALLOWED_ROLE_ID"),
     ("roles.notification", "NOTIFICATION_ROLE_ID"),
     ("roles.join_notification", "JOIN_NOTIFICATION_ROLE_ID"),
     ("roles.dm_target", "DM_TARGET_ROLE_ID"),
@@ -207,10 +206,6 @@ def save():
         json.dump(CONFIG, handle, ensure_ascii=False, indent=2)
 
 
-def reload():
-    global CONFIG
-    CONFIG = load()
-    return CONFIG
 
 
 def config_path():
@@ -348,27 +343,3 @@ def summary_lines():
         set_count = sum(1 for v in values.values() if v)
         lines.append(f"**{group}**: {set_count}/{len(values)} configured")
     return lines
-
-
-UI_SECTIONS = ("brand", "colors", "emojis", "templates")
-
-
-def export_ui_settings():
-    return {section: dict(CONFIG.get(section, {}) or {}) for section in UI_SECTIONS}
-
-
-def import_ui_settings(data):
-    if not isinstance(data, dict):
-        return False
-    changed = False
-    for section in UI_SECTIONS:
-        values = data.get(section)
-        if isinstance(values, dict) and values:
-            CONFIG[section] = _deep_merge(CONFIG.get(section, {}), values)
-            changed = True
-    return changed
-
-
-def reset_ui_settings():
-    for section in UI_SECTIONS:
-        CONFIG[section] = copy.deepcopy(DEFAULTS.get(section, {}))
