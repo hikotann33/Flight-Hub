@@ -8,6 +8,7 @@ import asyncio
 import calendar
 
 from . import core as C
+from . import ui_theme as theme
 
 _CHANNEL_CLEANUP_RUNNING = set()
 
@@ -436,7 +437,7 @@ async def task_manager():
                         loa_dirty = True
                         if member and log_channel:
 
-                            embed = discord.Embed(title="Leave Processing Notice", description=f"{member.mention}'s leave processing has started.", color=discord.Color.blue())
+                            embed = discord.Embed(title="Leave Processing Notice", description=f"{member.mention}'s leave processing has started.", color=theme.INFO)
                             embed.add_field(name="Target User", value=f"{member.display_name} (`{member.id}`)", inline=False)
                             embed.add_field(name="Period", value=f"<t:{data['start_timestamp']}:d> - <t:{data['end_timestamp']}:d>", inline=False)
                             embed.add_field(name="Reason", value=data.get('reason', 'None'), inline=False)
@@ -446,7 +447,7 @@ async def task_manager():
                                 dm_embed = discord.Embed(
                                     title="Leave Start Notice", 
                                     description="The scheduled time has arrived. Your roles were temporarily removed and you have entered leave mode.", 
-                                    color=discord.Color.orange()
+                                    color=theme.WARNING
                                 )
                                 dm_embed.add_field(name="Expected return", value=f"<t:{data['end_timestamp']}:F>", inline=False)
                                 await member.send(view=C.embed_to_v2_layout(dm_embed))
@@ -462,7 +463,7 @@ async def task_manager():
                         await C.record_loa_return(uid)
                         if member and log_channel:
 
-                            embed = discord.Embed(title="Leave End Notice", description=f"{member.mention}'s leave has ended and roles were restored.", color=discord.Color.orange())
+                            embed = discord.Embed(title="Leave End Notice", description=f"{member.mention}'s leave has ended and roles were restored.", color=theme.WARNING)
                             embed.add_field(name="Target User", value=f"{member.display_name} (`{member.id}`)", inline=False)
                             await log_channel.send(view=C.embed_to_v2_layout(embed))
 
@@ -470,7 +471,7 @@ async def task_manager():
                                 dm_embed = discord.Embed(
                                     title="Leave End Notice", 
                                     description="Your leave has ended at the scheduled time.\nYour original roles and nickname were restored. Welcome back!", 
-                                    color=discord.Color.green()
+                                    color=theme.SUCCESS
                                 )
                                 await member.send(view=C.embed_to_v2_layout(dm_embed))
                             except: pass
@@ -589,7 +590,7 @@ async def auto_remind_task():
     )
     desc += f"\n**Notes**\n{disclaimer}"
     
-    embed = discord.Embed(title=f"Flight Participation Reminder ({month})", description=desc, color=discord.Color.orange())
+    embed = discord.Embed(title=f"Flight Participation Reminder ({month})", description=desc, color=theme.WARNING)
     embed.set_footer(text="Flight Hub")
 
     success_count = 0
@@ -873,11 +874,11 @@ async def on_message(message):
         target_user = await C.get_target_user(C.client, target_str)
 
         if not target_user:
-            err_embed = discord.Embed(description=f"User `{target_str}` not found.", color=discord.Color.red())
+            err_embed = discord.Embed(description=f"User `{target_str}` not found.", color=theme.DANGER)
             await message.channel.send(embed=err_embed)
             return
 
-        dm_embed = discord.Embed(description=content_text, color=discord.Color.dark_blue())
+        dm_embed = discord.Embed(description=content_text, color=theme.PRIMARY)
         dm_embed.add_field(
             name="Action Required",
             value="Please click the button below to submit your reflection.",
@@ -899,7 +900,7 @@ async def on_message(message):
             display_name = getattr(target_user, 'display_name', target_user.name)
             forbidden_embed = discord.Embed(
                 description=f"Cannot send DM to ***{display_name}*** (DMs are disabled or no shared servers).",
-                color=discord.Color.red())
+                color=theme.DANGER)
             await message.channel.send(embed=forbidden_embed)
         return
 
@@ -960,10 +961,10 @@ async def on_message(message):
                 success, result_msg = await C.process_flight_creation(message.author, parse_data, image_bytes, saved_url)
                 if success:
                     await message.channel.send(
-                        embed=C.create_info_embed("Created via Message", result_msg, discord.Color.green()))
+                        embed=C.create_info_embed("Created via Message", result_msg, theme.SUCCESS))
                 else:
                     await message.channel.send(
-                        embed=C.create_info_embed("Creation Failed", result_msg, discord.Color.red()))
+                        embed=C.create_info_embed("Creation Failed", result_msg, theme.DANGER))
             elif has_static:
                 if parse_data["flight_code"] not in C.FLIGHT_DB:
                     C.FLIGHT_DB[parse_data["flight_code"]] = {"origin": parse_data["origin"],
@@ -980,7 +981,7 @@ async def on_message(message):
                 await message.channel.send(
                     embed=C.create_info_embed("Template Saved",
                                            f"Route info for `{parse_data['flight_code']}` registered.\nEquipment: {parse_data['equipment']}\nAirline: {parse_data['airline']}",
-                                           discord.Color.blue()), delete_after=10)
+                                           theme.INFO), delete_after=10)
             else:
                 missing = [k for k in required_keys if k not in parse_data]
                 await message.channel.send(f"Missing info for template: {', '.join(missing)}", delete_after=10)
@@ -999,7 +1000,7 @@ async def on_message_edit(before, after):
 
         content_text = lines[1]
 
-        new_dm_embed = discord.Embed(description=content_text, color=discord.Color.dark_blue())
+        new_dm_embed = discord.Embed(description=content_text, color=theme.PRIMARY)
         new_dm_embed.add_field(
             name="Action Required (Edited)",
             value="Please click the button below to submit your reflection.",
@@ -1118,7 +1119,7 @@ async def flights_list(interaction: discord.Interaction):
     active_flights.sort(key=lambda x: x["start_timestamp"])
 
     if not active_flights:
-        return await interaction.response.send_message(view=C.embed_to_v2_layout(C.create_info_embed('Info', 'No active flights found.', discord.Color.blue()), content=None), ephemeral=True)
+        return await interaction.response.send_message(view=C.embed_to_v2_layout(C.create_info_embed('Info', 'No active flights found.', theme.INFO), content=None), ephemeral=True)
 
     view = C.FlightListView(active_flights)
     embed = discord.Embed(title="Active Flights", description="Please select a flight from the menu below.",
@@ -1174,7 +1175,7 @@ async def loa_apply_cmd(interaction: discord.Interaction, start_date: str, end_d
     await C.save_loa_tracking()
     
 
-    embed = discord.Embed(title="Leave Request (Scheduled)", color=discord.Color.green())
+    embed = discord.Embed(title="Leave Request (Scheduled)", color=theme.SUCCESS)
     embed.add_field(name="Target User", value=target.mention, inline=False)
     embed.add_field(name="Start", value=f"<t:{int(start_dt.timestamp())}:F>", inline=False)
     embed.add_field(name="Expected return", value=f"<t:{int(end_dt.timestamp())}:F>", inline=False)
@@ -1186,7 +1187,7 @@ async def loa_apply_cmd(interaction: discord.Interaction, start_date: str, end_d
 
     log_channel = C.client.get_channel(C.LOA_TRACK_CHANNEL_ID)
     if log_channel:
-        log_embed = discord.Embed(title="Leave Scheduled", color=discord.Color.green())
+        log_embed = discord.Embed(title="Leave Scheduled", color=theme.SUCCESS)
         log_embed.add_field(name="Target", value=target.mention, inline=True)
         if target != interaction.user:
             log_embed.add_field(name="Requested by", value=interaction.user.mention, inline=True)
@@ -1332,7 +1333,7 @@ async def loa_list_cmd(interaction: discord.Interaction):
     if not C.LOA_CACHE:
         return await interaction.response.send_message(ephemeral=True, view=C.build_v2_card('Notice', [(None, 'No staff are currently on leave or have scheduled leave.')]))
         
-    embed = discord.Embed(title="Leave (LOA) Staff List", color=discord.Color.blue())
+    embed = discord.Embed(title="Leave (LOA) Staff List", color=theme.INFO)
     active_str = ""
     pending_str = ""
     
@@ -1436,7 +1437,7 @@ async def create_flight_slash(interaction: discord.Interaction, flight_code: str
             await C._test_mode_record("create_flight", interaction.user.id, "OK", {"flight_code": code})
             result_msg = f"Recorded test flight `{code}` in the isolated environment. No posts to staff/customers, Discord events, or external sheet sync were performed."
             await interaction.followup.send(
-                view=C.embed_to_v2_layout(C.create_info_embed("Created in Test Mode", result_msg, discord.Color.green()), content=None),
+                view=C.embed_to_v2_layout(C.create_info_embed("Created in Test Mode", result_msg, theme.SUCCESS), content=None),
                 ephemeral=True, allowed_mentions=discord.AllowedMentions.none())
 
             await C._test_show_flight_previews(interaction, record)
@@ -1444,13 +1445,13 @@ async def create_flight_slash(interaction: discord.Interaction, flight_code: str
         except Exception as exc:
             await C._test_mode_record("create_flight", interaction.user.id, "FAIL", {"error": str(exc)})
             return await interaction.followup.send(
-                ephemeral=True, view=C.build_v2_card("Test flight creation failed", [(None, str(exc))], color=0xE74C3C))
+                ephemeral=True, view=C.build_v2_card("Test flight creation failed", [(None, str(exc))], color=theme.DANGER))
 
     success, result_msg = await C.process_flight_creation(interaction.user, data, image_bytes, image_url)
     if success:
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_CHECK_STR + ' Created Successfully', result_msg, discord.Color.green()), content=None), ephemeral=True)
+        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_CHECK_STR + ' Created Successfully', result_msg, theme.SUCCESS), content=None), ephemeral=True)
     else:
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_X_STR + ' Creation Error', result_msg, discord.Color.red()), content=None), ephemeral=True)
+        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_X_STR + ' Creation Error', result_msg, theme.DANGER), content=None), ephemeral=True)
 
 @C.client.tree.command(name="create_flighttest", description="[Test] Create a flight using the designated test server and category.")
 @app_commands.describe(
@@ -1503,6 +1504,6 @@ async def create_flighttest_slash(interaction: discord.Interaction, flight_code:
 
     success, result_msg = await C.process_flighttest_creation(interaction.user, data, image_bytes, image_url)
     if success:
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Created Successfully (TEST)', result_msg, discord.Color.green()), content=None), ephemeral=True)
+        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Created Successfully (TEST)', result_msg, theme.SUCCESS), content=None), ephemeral=True)
     else:
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Creation Error (TEST)', result_msg, discord.Color.red()), content=None), ephemeral=True)
+        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Creation Error (TEST)', result_msg, theme.DANGER), content=None), ephemeral=True)

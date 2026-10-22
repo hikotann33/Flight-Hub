@@ -14,6 +14,7 @@ import os
 import matplotlib.pyplot as plt
 
 from . import core as C
+from . import ui_theme as theme
 
 class ClearLogSelect(discord.ui.Select):
     def __init__(self, safe_flights):
@@ -84,7 +85,7 @@ async def delay_flight(interaction: discord.Interaction, flight_code: str, new_t
 
     flight = next((f for f in C.FLIGHT_LOG_CACHE if f["flight_code"] == flight_code), None)
     if not flight:
-        return await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Error', f'Flight `{flight_code}` not found.', discord.Color.red()), content=None), ephemeral=True)
+        return await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Error', f'Flight `{flight_code}` not found.', theme.DANGER), content=None), ephemeral=True)
 
 
     if flight.get("is_gamenight") or flight_code.startswith("GN_"):
@@ -127,7 +128,7 @@ async def delay_flight(interaction: discord.Interaction, flight_code: str, new_t
             f"We apologize for any inconvenience this may cause and appreciate your patience.\n"
             f"We sincerely apologize for the inconvenience to our customers."
         ),
-        color=discord.Color.orange()
+        color=theme.WARNING
     )
     embed.set_author(name="Travel Update")
 
@@ -222,9 +223,9 @@ async def dispatch_app_cmd(interaction: discord.Interaction, message_id: str):
 
     success, result_msg = await C.process_flight_creation(host_user, data, image_bytes, image_url)
     if success:
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_CHECK_STR + ' Dispatched Successfully', 'Created a flight from the application and started recruitment.', discord.Color.green()), content=None), ephemeral=True)
+        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_CHECK_STR + ' Dispatched Successfully', 'Created a flight from the application and started recruitment.', theme.SUCCESS), content=None), ephemeral=True)
     else:
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Creation Error', result_msg, discord.Color.red()), content=None), ephemeral=True)
+        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Creation Error', result_msg, theme.DANGER), content=None), ephemeral=True)
 
 @C.client.tree.command(name="staff_profile", description="View a staff profile, flight participation rate, and role stats.")
 @app_commands.describe(target_user="Target user (Managers only) - mention, ID, or username")
@@ -390,7 +391,7 @@ def _safe_timestamp(value):
         return None
 
 async def _send_ops_error(interaction: discord.Interaction, title: str, message: str):
-    view = C.build_v2_card(title, [(None, message)], color=0xB23B3B)
+    view = C.build_v2_card(title, [(None, message)], color=theme.DANGER)
     if interaction.response.is_done():
         return await interaction.followup.send(view=view, ephemeral=True)
     return await interaction.response.send_message(view=view, ephemeral=True)
@@ -639,7 +640,7 @@ class FlightBackupRestoreView(discord.ui.LayoutView):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.invoking_user_id or not _is_staff_manager(interaction.user):
             await interaction.response.send_message(
-                view=C.build_v2_card("Access denied", [(None, "Only the staff manager who started this restore can confirm or cancel it.")], color=0xB23B3B),
+                view=C.build_v2_card("Access denied", [(None, "Only the staff manager who started this restore can confirm or cancel it.")], color=theme.DANGER),
                 ephemeral=True,
             )
             return False
@@ -650,22 +651,22 @@ class FlightBackupRestoreView(discord.ui.LayoutView):
             return await _send_ops_error(interaction, "Restore already closed", "This restore request has already been processed.")
         await interaction.response.defer(ephemeral=True)
         if C.FLIGHT_LOG_CHANNEL_ID in C.LOAD_UNSAFE_CHANNELS:
-            return await interaction.followup.send(view=C.build_v2_card("Restore blocked", [(None, "Flight data did not load safely. Run /healthcheck before restoring.")], color=0xB23B3B), ephemeral=True)
+            return await interaction.followup.send(view=C.build_v2_card("Restore blocked", [(None, "Flight data did not load safely. Run /healthcheck before restoring.")], color=theme.DANGER), ephemeral=True)
         if C.global_json_lock is None:
-            return await interaction.followup.send(view=C.build_v2_card("Restore unavailable", [(None, "The data lock is not initialized. Check the bot startup state.")], color=0xB23B3B), ephemeral=True)
+            return await interaction.followup.send(view=C.build_v2_card("Restore unavailable", [(None, "The data lock is not initialized. Check the bot startup state.")], color=theme.DANGER), ephemeral=True)
 
         async with C.global_json_lock:
             current = copy.deepcopy(C.FLIGHT_LOG_CACHE)
 
             pre_restore_name = f"flight_log_pre_restore_{int(datetime.datetime.now(C.JST).timestamp() * 1000000)}.json"
             if not await C.save_json_to_channel(C.FLIGHT_LOG_CHANNEL_ID, current, pre_restore_name):
-                return await interaction.followup.send(view=C.build_v2_card("Restore aborted", [(None, "The pre-restore backup could not be saved. No data was changed.")], color=0xB23B3B), ephemeral=True)
+                return await interaction.followup.send(view=C.build_v2_card("Restore aborted", [(None, "The pre-restore backup could not be saved. No data was changed.")], color=theme.DANGER), ephemeral=True)
             C.FLIGHT_LOG_CACHE = copy.deepcopy(self.candidate_data)
             C.global_db_dirty = True
             if not await C.save_json_to_channel(C.FLIGHT_LOG_CHANNEL_ID, C.FLIGHT_LOG_CACHE, "flight_log.json"):
                 C.FLIGHT_LOG_CACHE = current
                 C.global_db_dirty = True
-                return await interaction.followup.send(view=C.build_v2_card("Restore failed", [(None, "The restored data could not be saved. In-memory data has been returned to its previous state; the pre-restore backup remains available.")], color=0xB23B3B), ephemeral=True)
+                return await interaction.followup.send(view=C.build_v2_card("Restore failed", [(None, "The restored data could not be saved. In-memory data has been returned to its previous state; the pre-restore backup remains available.")], color=theme.DANGER), ephemeral=True)
             C.global_db_dirty = False
             self.completed = True
             self.status_text = f"Restore completed successfully.\nRecords restored: **{len(self.candidate_data)}**\nPre-restore backup: `{pre_restore_name}`"
@@ -705,11 +706,11 @@ async def restore_cmd(interaction: discord.Interaction, backup_message_id: str):
         try:
             channel = await C.client.fetch_channel(C.FLIGHT_LOG_CHANNEL_ID)
         except Exception:
-            return await interaction.followup.send(view=C.build_v2_card("Backup unavailable", [(None, "The flight backup channel could not be accessed.")], color=0xB23B3B), ephemeral=True)
+            return await interaction.followup.send(view=C.build_v2_card("Backup unavailable", [(None, "The flight backup channel could not be accessed.")], color=theme.DANGER), ephemeral=True)
     try:
         message = await channel.fetch_message(int(backup_message_id))
     except Exception:
-        return await interaction.followup.send(view=C.build_v2_card("Backup not found", [(None, "The selected message could not be retrieved. Check the message ID and channel permissions.")], color=0xB23B3B), ephemeral=True)
+        return await interaction.followup.send(view=C.build_v2_card("Backup not found", [(None, "The selected message could not be retrieved. Check the message ID and channel permissions.")], color=theme.DANGER), ephemeral=True)
     backup_attachment = next(
         (attachment for attachment in message.attachments
          if attachment.filename == "flight_log.json"
@@ -717,26 +718,26 @@ async def restore_cmd(interaction: discord.Interaction, backup_message_id: str):
         None,
     )
     if message.author != C.client.user or backup_attachment is None:
-        return await interaction.followup.send(view=C.build_v2_card("Invalid backup", [(None, "The selected message is not a bot-created flight_log.json or pre-restore backup in the configured backup channel.")], color=0xB23B3B), ephemeral=True)
+        return await interaction.followup.send(view=C.build_v2_card("Invalid backup", [(None, "The selected message is not a bot-created flight_log.json or pre-restore backup in the configured backup channel.")], color=theme.DANGER), ephemeral=True)
     attachment = backup_attachment
     if attachment.size > 15 * 1024 * 1024:
-        return await interaction.followup.send(view=C.build_v2_card("Restore blocked", [(None, "The selected backup exceeds the 15 MiB safety limit.")], color=0xB23B3B), ephemeral=True)
+        return await interaction.followup.send(view=C.build_v2_card("Restore blocked", [(None, "The selected backup exceeds the 15 MiB safety limit.")], color=theme.DANGER), ephemeral=True)
     try:
         parsed = json.loads((await attachment.read()).decode("utf-8"))
     except Exception as exc:
         print(f"[RESTORE] Could not parse backup message {message.id}: {exc}")
-        return await interaction.followup.send(view=C.build_v2_card("Invalid backup data", [(None, "The selected backup JSON could not be read.")], color=0xB23B3B), ephemeral=True)
+        return await interaction.followup.send(view=C.build_v2_card("Invalid backup data", [(None, "The selected backup JSON could not be read.")], color=theme.DANGER), ephemeral=True)
     if not isinstance(parsed, list) or any(not isinstance(item, dict) for item in parsed):
-        return await interaction.followup.send(view=C.build_v2_card("Invalid backup format", [(None, "Only a JSON array of flight records can be restored.")], color=0xB23B3B), ephemeral=True)
+        return await interaction.followup.send(view=C.build_v2_card("Invalid backup format", [(None, "Only a JSON array of flight records can be restored.")], color=theme.DANGER), ephemeral=True)
     if len(parsed) > 10000:
-        return await interaction.followup.send(view=C.build_v2_card("Restore blocked", [(None, "The backup exceeds the safety limit of 10,000 records.")], color=0xB23B3B), ephemeral=True)
+        return await interaction.followup.send(view=C.build_v2_card("Restore blocked", [(None, "The backup exceeds the safety limit of 10,000 records.")], color=theme.DANGER), ephemeral=True)
     candidate = copy.deepcopy(parsed)
     try:
         for record in candidate:
             C.migrate_flight_record(record)
     except Exception as exc:
         print(f"[RESTORE] Migration failed for backup message {message.id}: {exc}")
-        return await interaction.followup.send(view=C.build_v2_card("Backup migration failed", [(None, "The selected backup could not be converted to the current record format. No data was changed.")], color=0xB23B3B), ephemeral=True)
+        return await interaction.followup.send(view=C.build_v2_card("Backup migration failed", [(None, "The selected backup could not be converted to the current record format. No data was changed.")], color=theme.DANGER), ephemeral=True)
 
     preview_text = (
         f"Source message: `{message.id}`\n"
@@ -1041,9 +1042,9 @@ def _build_line_chart(x_labels: list, values: list, title: str, ylabel: str, col
 )
 async def flight_stats_graph_cmd(interaction: discord.Interaction, graph_type: str, months: int = 6):
     if interaction.guild_id != C.STAFF_GUILD_ID:
-        return await interaction.response.send_message(view=C.embed_to_v2_layout(C.create_info_embed('Error', 'This command can only be used in the staff server.', discord.Color.red()), content=None), ephemeral=True)
+        return await interaction.response.send_message(view=C.embed_to_v2_layout(C.create_info_embed('Error', 'This command can only be used in the staff server.', theme.DANGER), content=None), ephemeral=True)
     if C.LOG_MANAGER_ROLE_ID not in [r.id for r in interaction.user.roles] and not C.is_chief(interaction.user):
-        return await interaction.response.send_message(view=C.embed_to_v2_layout(C.create_info_embed('Error', 'You do not have permission to use this command.', discord.Color.red()), content=None), ephemeral=True)
+        return await interaction.response.send_message(view=C.embed_to_v2_layout(C.create_info_embed('Error', 'You do not have permission to use this command.', theme.DANGER), content=None), ephemeral=True)
 
     await interaction.response.defer(ephemeral=False)
 
@@ -1066,7 +1067,7 @@ async def flight_stats_graph_cmd(interaction: discord.Interaction, graph_type: s
 
             top = sorted(user_counts.items(), key=lambda x: x[1], reverse=True)[:10]
             if not top:
-                return await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('No Data', 'No flight records found for the last 30 days.', discord.Color.orange()), content=None))
+                return await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('No Data', 'No flight records found for the last 30 days.', theme.WARNING), content=None))
 
             labels = []
             for uid, _ in top:
@@ -1131,7 +1132,7 @@ async def flight_stats_graph_cmd(interaction: discord.Interaction, graph_type: s
 
             top = sorted(route_counts.items(), key=lambda x: x[1], reverse=True)[:10]
             if not top:
-                return await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('No Data', 'No flight records found for the last 30 days.', discord.Color.orange()), content=None))
+                return await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('No Data', 'No flight records found for the last 30 days.', theme.WARNING), content=None))
 
             labels = [code for code, _ in top]
             values = [c for _, c in top]
@@ -1151,7 +1152,7 @@ async def flight_stats_graph_cmd(interaction: discord.Interaction, graph_type: s
 
     except Exception as e:
         traceback.print_exc()
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Error', f'An error occurred while generating the graph: {e}', discord.Color.red()), content=None))
+        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Error', f'An error occurred while generating the graph: {e}', theme.DANGER), content=None))
 
 @C.client.tree.command(name="cancel", description="Announce a flight cancellation.")
 @app_commands.describe(flight_code="Select Flight Code", reason="Reason for cancellation")
@@ -1164,7 +1165,7 @@ async def cancel_flight(interaction: discord.Interaction, flight_code: str, reas
 
     flight = next((f for f in C.FLIGHT_LOG_CACHE if f["flight_code"] == flight_code), None)
     if not flight:
-        return await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Error', f'Flight `{flight_code}` not found.', discord.Color.red()), content=None), ephemeral=True)
+        return await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Error', f'Flight `{flight_code}` not found.', theme.DANGER), content=None), ephemeral=True)
 
     airline = flight.get('airline', 'Airline')
     destination = flight.get('destination', 'Unknown')
@@ -1178,7 +1179,7 @@ async def cancel_flight(interaction: discord.Interaction, flight_code: str, reas
             f"We apologize for any inconvenience this may cause and appreciate your understanding.\n"
             f"We sincerely apologize for the major inconvenience to our customers."
         ),
-        color=discord.Color.red()
+        color=theme.DANGER
     )
     embed.set_author(name="Travel Update")
 
@@ -1632,7 +1633,7 @@ class LogAssignmentView(discord.ui.View):
                     mentions = " ".join([f"<@{uid}>" for uid in uids])
                     desc += f"> {pos}: {mentions}\n"
 
-        return discord.Embed(title=title, description=desc, color=0x1B3444)
+        return discord.Embed(title=title, description=desc, color=theme.PRIMARY)
 
     async def submit_log(self, interaction: discord.Interaction):
 
@@ -1956,7 +1957,7 @@ async def backupflight_cmd(interaction: discord.Interaction, flight_code: str):
 
     flight = next((f for f in C.FLIGHT_LOG_CACHE if f["flight_code"] == flight_code), None)
     if not flight:
-        return await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Error', f'No active flight `{flight_code}` was found.', discord.Color.red()), content=None), ephemeral=True)
+        return await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Error', f'No active flight `{flight_code}` was found.', theme.DANGER), content=None), ephemeral=True)
 
 
     c_guild = C.client.get_guild(C.CUSTOMER_GUILD_ID)
@@ -2005,12 +2006,12 @@ async def backupflight_cmd(interaction: discord.Interaction, flight_code: str):
         success_embed = C.create_info_embed(
             C.EMOJI_CHECK_STR + " Backup Event Created", 
             f"Recreated the calendar (Discord event) silently.\n\n**New event link:**\n{event.url}\n\nIf needed, run `/update_ui` to update links in already-sent recruitment messages.", 
-            discord.Color.green()
+            theme.SUCCESS
         )
         await interaction.followup.send(view=C.embed_to_v2_layout(success_embed, content=None), ephemeral=True)
     
     except Exception as e:
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_X_STR + ' Creation Failed', f'Failed to create the calendar: {e}', discord.Color.red()), content=None), ephemeral=True)
+        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_X_STR + ' Creation Failed', f'Failed to create the calendar: {e}', theme.DANGER), content=None), ephemeral=True)
 
 @C.client.tree.command(name="restart", description="[Admin] Restart the bot (use when it is misbehaving).")
 async def restart_cmd(interaction: discord.Interaction):
@@ -2151,12 +2152,12 @@ async def up_cmd(interaction: discord.Interaction, restart: bool = True):
         f_ok, _, f_err = await _git_run(["git", "-C", project_dir, "fetch", "origin"])
         if f_ok != 0:
             return await interaction.followup.send(ephemeral=True, view=C.build_v2_card('Update',
-                [(None, f"`git fetch` failed.\n```\n{chr(10).join((f_err or 'unknown error').strip().splitlines()[-6:])}\n```")], color=0xE74C3C))
+                [(None, f"`git fetch` failed.\n```\n{chr(10).join((f_err or 'unknown error').strip().splitlines()[-6:])}\n```")], color=theme.DANGER))
 
         p_ok, p_out, p_err = await _git_run(["git", "-C", project_dir, "pull", "--ff-only", "origin", branch])
         if p_ok != 0:
             return await interaction.followup.send(ephemeral=True, view=C.build_v2_card('Update',
-                [(None, f"`git pull` failed (there may be local changes).\n```\n{chr(10).join((p_err or p_out or 'unknown error').strip().splitlines()[-8:])}\n```\nThe update was aborted. Please commit uncommitted changes and try again.")], color=0xE74C3C))
+                [(None, f"`git pull` failed (there may be local changes).\n```\n{chr(10).join((p_err or p_out or 'unknown error').strip().splitlines()[-8:])}\n```\nThe update was aborted. Please commit uncommitted changes and try again.")], color=theme.DANGER))
 
         _, after, _ = await _git_run(["git", "-C", project_dir, "rev-parse", "HEAD"])
         after = after.strip()[:7]
@@ -2202,10 +2203,10 @@ async def setup_em_permissions_cmd(interaction: discord.Interaction):
         warnings = await C.setup_event_manager_command_permissions()
     except Exception as e:
         return await interaction.followup.send(ephemeral=True, view=C.build_v2_card('Update',
-            [(None, f'An error occurred while resetting: {e}')], color=0xE74C3C))
+            [(None, f'An error occurred while resetting: {e}')], color=theme.DANGER))
     if warnings:
         await interaction.followup.send(ephemeral=True, view=C.build_v2_card('Update',
-            [(None, 'Failed to reset permissions for some commands.\n' + '\n'.join(warnings))], color=0xE74C3C))
+            [(None, 'Failed to reset permissions for some commands.\n' + '\n'.join(warnings))], color=theme.DANGER))
     else:
         await interaction.followup.send(ephemeral=True, view=C.build_v2_card('Notice',
             [(None, f"{C.EMOJI_CHECK_STR} Restored event-manager commands to 'visible to everyone' (execution still restricted to EventManager/Chief on the staff server).")]))
@@ -2404,7 +2405,7 @@ async def request_staff_cmd(interaction: discord.Interaction, flight_code: str, 
 
     flight = next((f for f in C.FLIGHT_LOG_CACHE if f["flight_code"] == flight_code), None)
     if not flight:
-        return await interaction.response.send_message(view=C.embed_to_v2_layout(C.create_info_embed('Error', f'Flight `{flight_code}` not found.', discord.Color.red()), content=None), ephemeral=True)
+        return await interaction.response.send_message(view=C.embed_to_v2_layout(C.create_info_embed('Error', f'Flight `{flight_code}` not found.', theme.DANGER), content=None), ephemeral=True)
 
     await interaction.response.defer(ephemeral=True)
 
@@ -2422,7 +2423,7 @@ async def request_staff_cmd(interaction: discord.Interaction, flight_code: str, 
         description=(f"Additional staff are needed for **{flight_code}**.\n"
                      f"If you can help, please join as soon as possible.\n\n"
                      f"**Route:** {route_text}\n**Role:** {role_mention}"),
-        color=discord.Color.orange()
+        color=theme.WARNING
     )
     if message:
         embed.add_field(name="Message", value=message, inline=False)

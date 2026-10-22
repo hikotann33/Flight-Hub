@@ -9,6 +9,7 @@ import aiohttp
 import asyncio
 
 from . import core as C
+from . import ui_theme as theme
 
 @C.client.tree.command(name="create_custom_flight",
                      description="Create a completely custom flight without using a template.")
@@ -76,9 +77,9 @@ async def create_custom_flight_slash(
     success, result_msg = await C.process_flight_creation(interaction.user, data, image_bytes,
                                                         saved_msg.attachments[0].url)
     if success:
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_CHECK_STR + ' Custom Flight Created Successfully', result_msg, discord.Color.green()), content=None), ephemeral=True)
+        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_CHECK_STR + ' Custom Flight Created Successfully', result_msg, theme.SUCCESS), content=None), ephemeral=True)
     else:
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_X_STR + ' Creation Error', result_msg, discord.Color.red()), content=None), ephemeral=True)
+        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_X_STR + ' Creation Error', result_msg, theme.DANGER), content=None), ephemeral=True)
 
 class _CollectFollowup:
     def __init__(self):
@@ -187,7 +188,7 @@ async def update_cmd(interaction: discord.Interaction, full_reload: bool = True)
         all_ok = not C.load_problems()
         embed = discord.Embed(
             title="Data Refresh & Migration",
-            color=discord.Color.green() if all_ok and not rep_["warnings"] else discord.Color.orange())
+            color=theme.SUCCESS if all_ok and not rep_["warnings"] else theme.WARNING)
 
         lines = []
         for name, st in C.LOAD_STATUS.items():
@@ -209,7 +210,7 @@ async def update_cmd(interaction: discord.Interaction, full_reload: bool = True)
             ev_text += "\n" + "\n".join(f"• `{c}` — {r}" for c, r in ev_rep["failed"][:8])
         embed.add_field(name="Active events", value=ev_text[:1024], inline=False)
         if ev_rep["failed"]:
-            embed.color = discord.Color.orange()
+            embed.color = theme.WARNING
 
         last = int(rep_["last_mention"] or 0)
         if last and C.mention_cooldown_active():
@@ -299,9 +300,9 @@ async def create_private_flight_slash(
     success, result_msg = await C.process_flight_creation(interaction.user, data, image_bytes,
                                                         saved_msg.attachments[0].url)
     if success:
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_CHECK_STR + ' Private Flight Created Successfully', result_msg + '\n(No customer notification will be sent.)', discord.Color.green()), content=None), ephemeral=True)
+        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_CHECK_STR + ' Private Flight Created Successfully', result_msg + '\n(No customer notification will be sent.)', theme.SUCCESS), content=None), ephemeral=True)
     else:
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_X_STR + ' Creation Error', result_msg, discord.Color.red()), content=None), ephemeral=True)
+        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_X_STR + ' Creation Error', result_msg, theme.DANGER), content=None), ephemeral=True)
 
 @C.client.tree.command(name="create_private_flight_template",
                      description="Create a private, staff-only flight from a saved template (no customer notification).")
@@ -368,13 +369,13 @@ async def create_private_flight_template_slash(
 
     success, result_msg = await C.process_flight_creation(interaction.user, data, image_bytes, saved_msg.attachments[0].url)
     if success:
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_CHECK_STR + ' Private Flight Created Successfully', result_msg + '\n(No customer notification will be sent.)', discord.Color.green()), content=None), ephemeral=True)
+        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_CHECK_STR + ' Private Flight Created Successfully', result_msg + '\n(No customer notification will be sent.)', theme.SUCCESS), content=None), ephemeral=True)
     else:
         try:
             await saved_msg.delete()
         except Exception:
             pass
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_X_STR + ' Creation Error', result_msg, discord.Color.red()), content=None), ephemeral=True)
+        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed(C.EMOJI_X_STR + ' Creation Error', result_msg, theme.DANGER), content=None), ephemeral=True)
 
 @C.client.tree.command(name="host_change", description="Change the host of a flight.")
 @app_commands.describe(flight_code="Target flight code", new_host="Select the new host")
@@ -382,14 +383,14 @@ async def create_private_flight_template_slash(
 @C.event_manager_only
 async def host_change(interaction: discord.Interaction, flight_code: str, new_host: discord.Member):
     if not C.is_event_manager_or_chief(interaction.user):
-        return await interaction.response.send_message(view=C.embed_to_v2_layout(C.create_info_embed('Error', 'No permission.', discord.Color.red()), content=None), ephemeral=True)
+        return await interaction.response.send_message(view=C.embed_to_v2_layout(C.create_info_embed('Error', 'No permission.', theme.DANGER), content=None), ephemeral=True)
         
     await interaction.response.defer(ephemeral=True)
     try:
         async with C.global_json_lock:
             target = next((f for f in C.FLIGHT_LOG_CACHE if f["flight_code"] == flight_code), None)
             if not target:
-                return await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Error', f'Flight `{flight_code}` not found.', discord.Color.red()), content=None), ephemeral=True)
+                return await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Error', f'Flight `{flight_code}` not found.', theme.DANGER), content=None), ephemeral=True)
                 
             old_host_id = target["host_id"]
             target["host_id"] = new_host.id
@@ -446,9 +447,9 @@ async def host_change(interaction: discord.Interaction, flight_code: str, new_ho
             except:
                 pass
                 
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Success', f'{C.EMOJI_CHECK_STR} Host changed to {new_host.mention}.', discord.Color.green()), content=None), ephemeral=True)
+        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Success', f'{C.EMOJI_CHECK_STR} Host changed to {new_host.mention}.', theme.SUCCESS), content=None), ephemeral=True)
     except Exception as e:
-        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Error', f'An error occurred while changing: {e}', discord.Color.red()), content=None), ephemeral=True)
+        await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Error', f'An error occurred while changing: {e}', theme.DANGER), content=None), ephemeral=True)
 
 @C.client.tree.command(name="update_ui", description="Force update ALL messages & SYNC Event Image from DB.")
 @app_commands.describe(flight_code="The flight code to synchronize (e.g., JI54)")
@@ -836,7 +837,7 @@ async def join_server(interaction: discord.Interaction, flight_code: str = None,
 
     flight = next((f for f in C.FLIGHT_LOG_CACHE if f["flight_code"] == flight_code), None)
     if not flight:
-        return await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Error', f'Flight `{flight_code}` not found.', discord.Color.red()), content=None), ephemeral=True)
+        return await interaction.followup.send(view=C.embed_to_v2_layout(C.create_info_embed('Error', f'Flight `{flight_code}` not found.', theme.DANGER), content=None), ephemeral=True)
 
 
     if flight.get("is_private"):

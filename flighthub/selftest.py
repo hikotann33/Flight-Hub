@@ -8,6 +8,7 @@ import asyncio
 import copy
 
 from . import core as C
+from . import ui_theme as theme
 
 SELFTEST_STAFF_CATEGORY_ID = 0
 
@@ -228,7 +229,7 @@ async def test_admin_cmd(interaction: discord.Interaction):
         except Exception as exc:
             print(f"test_admin final report send error: {exc}")
             await interaction.followup.send(
-                ephemeral=True, view=C.build_v2_card("Report failed", [(None, f"Failed to send the report TXT: {exc}")], color=0xE74C3C))
+                ephemeral=True, view=C.build_v2_card("Report failed", [(None, f"Failed to send the report TXT: {exc}")], color=theme.DANGER))
 
 @C.client.tree.command(name="test_evaluate", description="[Administrator only] Save and evaluate all commands run in test mode.", guild=C.STAFF_GUILD)
 @app_commands.guild_only()
@@ -263,10 +264,10 @@ async def test_evaluate_cmd(interaction: discord.Interaction):
             [("Result", verdict), ("Summary", f"Runs: {total} / OK: {ok} / Failed: {fail} / Other: {other} / Success rate: {pct:.1f}%"),
              ("JSON save", "Saved" if saved else "Save failed — check the bot permissions and the save channel."),
              ("Recent operations", detail)],
-            color=0x2ECC71 if total and fail == 0 and other == 0 and saved else (0xE74C3C if fail or not saved else 0xF1C40F)))
+            color=theme.SUCCESS if total and fail == 0 and other == 0 and saved else (theme.DANGER if fail or not saved else theme.WARNING)))
     except Exception as exc:
         await interaction.followup.send(ephemeral=True, view=C.build_v2_card(
-            "Evaluation error", [(None, f"Failed to evaluate or save JSON: {exc}")], color=0xE74C3C))
+            "Evaluation error", [(None, f"Failed to evaluate or save JSON: {exc}")], color=theme.DANGER))
 
 @C.client.tree.command(name="test_progress", description="Show visual test coverage and current progress.", guild=C.STAFF_GUILD)
 @app_commands.guild_only()
@@ -313,7 +314,7 @@ async def test_progress_cmd(interaction: discord.Interaction):
     await interaction.response.send_message(
         ephemeral=True, allowed_mentions=discord.AllowedMentions.none(),
         view=C.build_v2_card("Flight Hub Test Progress Dashboard", [("Test items", "\n".join(lines))],
-                           color=0x2ECC71 if failed == 0 and pending == 0 and saved else (0xE74C3C if failed or not saved else 0xF1C40F)))
+                           color=theme.SUCCESS if failed == 0 and pending == 0 and saved else (theme.DANGER if failed or not saved else theme.WARNING)))
 
 class _StNamespace:
     def __getattr__(self, name):
@@ -1086,7 +1087,7 @@ def _st_cards(rep, invoker, started, finished):
         size += add
     if cur:
         cards.append(cur)
-    color = 0x2ECC71 if not fails and not warns else (0xE74C3C if fails else 0xF1C40F)
+    color = theme.SUCCESS if not fails and not warns else (theme.DANGER if fails else theme.WARNING)
     out = []
     for i, sections in enumerate(cards):
         out.append(C.build_v2_card(title if i == 0 else f"{title} (continued {i + 1})", sections,
@@ -1159,7 +1160,7 @@ async def selftest_cmd(interaction: discord.Interaction, events: bool = True):
                 + (f"Details: {result_ch.mention}" if result_ch else "Could not create the Self-Test Result channel. Please check the logs."))
         await interaction.followup.send(ephemeral=True, view=C.build_v2_card(
             "Self-Test Result — No issues" if not fails and not warns else f"Self-Test Result — {fails} issue(s) / {warns} warning(s)",
-            [(None, text)], color=0x2ECC71 if not fails and not warns else 0xE74C3C))
+            [(None, text)], color=theme.SUCCESS if not fails and not warns else theme.DANGER))
     except Exception as e:
         traceback.print_exc()
         try:

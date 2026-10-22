@@ -4,6 +4,7 @@ import datetime
 import re
 
 from . import core as C
+from . import ui_theme as theme
 
 class FlightAppModal(discord.ui.Modal):
     def __init__(self, departure_date, departure_time, flight_code, event_type, tz_str, offset_hrs, default_equipment=""):
@@ -127,7 +128,7 @@ async def inactive_staff_cmd(interaction: discord.Interaction):
             inactive_members.append(member)
 
     if not inactive_members:
-        embed = discord.Embed(title="Staff inactive for the past month", description="No inactive staff (everyone is active).", color=discord.Color.green())
+        embed = discord.Embed(title="Staff inactive for the past month", description="No inactive staff (everyone is active).", color=theme.SUCCESS)
         return await interaction.followup.send(view=C.embed_to_v2_layout(embed, content=None))
 
     desc = "\n".join([m.mention for m in inactive_members])
@@ -137,7 +138,7 @@ async def inactive_staff_cmd(interaction: discord.Interaction):
     embed = discord.Embed(
         title=f"Staff inactive for the past month ({len(inactive_members)})",
         description=desc,
-        color=discord.Color.red()
+        color=theme.DANGER
     )
     embed.set_footer(text="Staff on leave (LOA) are automatically excluded.")
     await interaction.followup.send(view=C.embed_to_v2_layout(embed, content=None))
@@ -269,7 +270,7 @@ async def flight_app_backup_cmd(interaction: discord.Interaction, message_id: st
     view = C.FlightAppView()
     
     if is_approved:
-        embed.color = discord.Color.green()
+        embed.color = theme.SUCCESS
         embed.title = "Flight Application (Approved)"
         embed.add_field(name="Status", value="Approved (Legacy Backup)", inline=False)
         for child in view.children:

@@ -4,6 +4,7 @@ import asyncio
 import uuid
 
 from . import core as C
+from . import ui_theme as theme
 
 def eval_blocked_message():
     if C.EVAL_TRACK_CHANNEL_ID in C.LOAD_UNSAFE_CHANNELS:
@@ -209,7 +210,7 @@ class EvalScheduleManagerView(discord.ui.View):
 
     def build_embed(self) -> discord.Embed:
         ev = self.selected()
-        embed = discord.Embed(title="Evaluation Schedule Management", color=0x1B3444)
+        embed = discord.Embed(title="Evaluation Schedule Management", color=theme.PRIMARY)
         if self.note:
             embed.description = self.note + "\n\n"
         else:
@@ -380,7 +381,7 @@ class EvalBuilderView(discord.ui.View):
         embed = discord.Embed(
             title="Evaluation Send Builder",
             description="Select a user from the menu to open the input form.\nYou can set different evaluations for each person and then schedule or send them all at once.\nTo edit or cancel scheduled sends, press the Manage scheduled sends button.",
-            color=0x1B3444
+            color=theme.PRIMARY
         )
         
         queue_str = ""
@@ -458,7 +459,7 @@ class EvalConfirmView(discord.ui.View):
         embed = discord.Embed(
             title="Evaluation Send Confirmation",
             description=f"Send an individual evaluation sheet to each of the **{len(self.queued_evals)}** people in the list.\nChoose the send method (immediate or scheduled) from the buttons below.",
-            color=0x1B3444
+            color=theme.PRIMARY
         )
         member_list_str = " ".join([ev['target_member'].mention for ev in self.queued_evals])
         if len(member_list_str) > 1024:

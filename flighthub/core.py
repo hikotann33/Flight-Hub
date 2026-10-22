@@ -1377,7 +1377,7 @@ async def notify_loa_role_failure(user_id: int, member, error, phase: str, role_
         if role_ids:
             sections.append(("Affected roles", " ".join(f"<@&{role_id}>" for role_id in role_ids)[:1024]))
         await channel.send(
-            view=build_v2_card("LOA Role Update Failed", sections, color=0xB23B3B,
+            view=build_v2_card("LOA Role Update Failed", sections, color=theme.DANGER,
                                content=f"<@&{ADMIN_ROLE_ID}>"),
             allowed_mentions=discord.AllowedMentions(roles=True),
         )
@@ -2868,7 +2868,7 @@ class ReflectionModal(Modal):
             embed = discord.Embed(
                 title=f"{EMOJI_NOTI_STR} Reflection Received: {interaction.user.display_name}",
                 description=self.feedback.value,
-                color=discord.Color.green()
+                color=theme.SUCCESS
             )
             embed.set_footer(text=f"User ID: {interaction.user.id}")
             await channel.send(embed=embed)
@@ -2938,7 +2938,7 @@ class CancelReasonModal(discord.ui.Modal, title="Cancellation Reason"):
                 u_name = user.display_name if user else f"User ID: {self.user_id}"
                 dm_embed = discord.Embed(title="Staff Cancellation Notice",
                                          description=f"**{u_name}** (<@{self.user_id}>) has cancelled their participation.\n**Flight:** {flight['flight_code']}",
-                                         color=discord.Color.orange())
+                                         color=theme.WARNING)
                 dm_embed.add_field(name="Reason", value=self.reason.value, inline=False)
                 try:
                     await host.send(embed=dm_embed)
@@ -2974,7 +2974,7 @@ class DeleteReasonModal(discord.ui.Modal, title="Reason for Deletion"):
                 f"We apologize for any inconvenience this may cause and appreciate your understanding.\n"
                 f"We sincerely apologize for the major inconvenience to our customers."
             ),
-            color=discord.Color.red()
+            color=theme.DANGER
         )
         embed.set_author(name="Travel Update")
 
@@ -3875,7 +3875,7 @@ class ShiftRequestView(discord.ui.View):
         async with global_json_lock:
             target_idx = next((i for i, f in enumerate(FLIGHT_LOG_CACHE) if f["flight_code"] == self.flight['flight_code']), -1)
             if target_idx == -1:
-                await interaction.followup.send(view=embed_to_v2_layout(create_info_embed('Error', 'Flight not found.', discord.Color.red()), content=None), ephemeral=True)
+                await interaction.followup.send(view=embed_to_v2_layout(create_info_embed('Error', 'Flight not found.', theme.DANGER), content=None), ephemeral=True)
                 return False
             
             flight = FLIGHT_LOG_CACHE[target_idx]
@@ -3912,7 +3912,7 @@ class ShiftRequestView(discord.ui.View):
 
     async def submit_callback(self, interaction: discord.Interaction):
         if not self.first_choice.values or not self.second_choice.values:
-            return await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Error', 'Please select both 1st and 2nd choices.', discord.Color.red()), content=None), ephemeral=True)
+            return await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Error', 'Please select both 1st and 2nd choices.', theme.DANGER), content=None), ephemeral=True)
 
         await interaction.response.defer()
         pref_data = {
@@ -3972,13 +3972,13 @@ class FlightSignupView(discord.ui.View):
         staff_message = staff_message or interaction.message
         flight_code = await self.get_flight_code(interaction)
         if not flight_code:
-            return await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Error', 'Error reading flight.', discord.Color.red()), content=None), ephemeral=True)
+            return await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Error', 'Error reading flight.', theme.DANGER), content=None), ephemeral=True)
         user_id = interaction.user.id
         now_ts = int(datetime.datetime.now().timestamp())
 
         target_idx = next((i for i, f in enumerate(FLIGHT_LOG_CACHE) if f["flight_code"] == flight_code), -1)
         if target_idx == -1:
-            return await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Error', 'Error: Flight not found.', discord.Color.red()), content=None), ephemeral=True)
+            return await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Error', 'Error: Flight not found.', theme.DANGER), content=None), ephemeral=True)
         flight = FLIGHT_LOG_CACHE[target_idx]
 
 
@@ -3992,7 +3992,7 @@ class FlightSignupView(discord.ui.View):
 
         if user_id == flight.get("host_id"):
             if action == "decline" or (action == "accept" and user_id in flight.get("accepted_users", [])):
-                return await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Error', '**The host cannot remove their accepted status or decline.**', discord.Color.red()), content=None), ephemeral=True)
+                return await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Error', '**The host cannot remove their accepted status or decline.**', theme.DANGER), content=None), ephemeral=True)
 
         staff_ts = flight.get("staff_timestamp", 0)
         is_late = (staff_ts - now_ts) <= 3600
@@ -4204,15 +4204,15 @@ class PersistentCustomerView(discord.ui.View):
             embed = interaction.message.embeds[0]
             fc_match = re.search(r"Flight (.+)", embed.title)
             if not fc_match:
-                return await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Error', EMOJI_X_STR + ' Cannot read info.', discord.Color.red()), content=None), ephemeral=True)
+                return await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Error', EMOJI_X_STR + ' Cannot read info.', theme.DANGER), content=None), ephemeral=True)
             flight_code = fc_match.group(1).strip()
             target = next((f for f in FLIGHT_LOG_CACHE if f["flight_code"] == flight_code), None)
             if target:
                 await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Check-in', f"Please join via the link:\n\n{target['event_url']}"), content=None), ephemeral=True)
             else:
-                await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Error', EMOJI_X_STR + ' Data not found.', discord.Color.red()), content=None), ephemeral=True)
+                await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Error', EMOJI_X_STR + ' Data not found.', theme.DANGER), content=None), ephemeral=True)
         except Exception as e:
-            await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Error', f'{EMOJI_X_STR} {e}', discord.Color.red()), content=None), ephemeral=True)
+            await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Error', f'{EMOJI_X_STR} {e}', theme.DANGER), content=None), ephemeral=True)
 
 
 class FlightListSelect(discord.ui.Select):
@@ -4983,16 +4983,16 @@ Please join the server and VC at the specified time.
                 await interaction.followup.send(ephemeral=True, allowed_mentions=discord.AllowedMentions.none(), view=build_v2_card(
                     "Test briefing saved — not published",
                     [("Test result", f"`{target['flight_code']}` briefing content and assignments were saved to the test JSON.\nNothing was posted to the staff or customer channels.")],
-                    color=0x2ECC71))
+                    color=theme.SUCCESS))
             except Exception as exc:
                 await _test_mode_record("edit_briefing" if self.is_edit else "briefing", interaction.user.id, "FAIL", {"error": str(exc)})
                 await interaction.followup.send(ephemeral=True, allowed_mentions=discord.AllowedMentions.none(), view=build_v2_card(
-                    "Test briefing failed", [(None, str(exc))], color=0xE74C3C))
+                    "Test briefing failed", [(None, str(exc))], color=theme.DANGER))
             return
 
         target_channel = client.get_channel(BRIEFING_CHANNEL_ID)
         if not target_channel:
-            await interaction.followup.send(view=embed_to_v2_layout(create_info_embed('Error', 'Briefing channel not found.', discord.Color.red()), content=None), ephemeral=True)
+            await interaction.followup.send(view=embed_to_v2_layout(create_info_embed('Error', 'Briefing channel not found.', theme.DANGER), content=None), ephemeral=True)
             return
 
         self.current_position = None
@@ -5197,7 +5197,7 @@ def _test_survey_status_view(sflight, owner_id):
         + (" / **complete**" if res.get("completed_at") else ""),
         "This display updates automatically when you answer using the DM buttons.",
     ]
-    view.add_item(discord.ui.Container(discord.ui.TextDisplay("\n".join(lines)), accent_color=0x3498DB))
+    view.add_item(discord.ui.Container(discord.ui.TextDisplay("\n".join(lines)), accent_color=theme.INFO))
     return view
 
 
@@ -5354,7 +5354,7 @@ async def _test_flight_log_submit(interaction, flight, checks, comment, content)
             raise RuntimeError("The survey send process did not complete")
         await _test_mode_record("flight_log", interaction.user.id, "OK", {"flight_code": code, "steps": steps})
         await interaction.followup.send(ephemeral=True, view=build_v2_card(
-            "Test Flight-log completed — not posted", [("Result", "\n".join(steps))], color=0x2ECC71))
+            "Test Flight-log completed — not posted", [("Result", "\n".join(steps))], color=theme.SUCCESS))
 
         try:
             await _test_send_chat_archive(interaction, target)
@@ -5367,7 +5367,7 @@ async def _test_flight_log_submit(interaction, flight, checks, comment, content)
     except Exception as exc:
         await _test_mode_record("flight_log", interaction.user.id, "FAIL", {"flight_code": code, "error": str(exc)})
         await interaction.followup.send(ephemeral=True, view=build_v2_card(
-            "Test Flight-log failed", [(None, f"{type(exc).__name__}: {exc}")], color=0xE74C3C))
+            "Test Flight-log failed", [(None, f"{type(exc).__name__}: {exc}")], color=theme.DANGER))
 
 
 class FlightLogModal(discord.ui.Modal, title="Flight-log Comments"):
@@ -6760,9 +6760,9 @@ class FlightChannelDeleteConfirmView(discord.ui.View):
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         global global_db_dirty
         if interaction.user.id != self.host_id:
-            return await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Not allowed', 'Only the flight host can delete these channels.', discord.Color.red()), content=None), ephemeral=True)
+            return await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Not allowed', 'Only the flight host can delete these channels.', theme.DANGER), content=None), ephemeral=True)
         await interaction.response.edit_message(
-            embed=create_info_embed("Deleting...", "The VC and chat channels are being deleted.", discord.Color.orange()), view=None)
+            embed=create_info_embed("Deleting...", "The VC and chat channels are being deleted.", theme.WARNING), view=None)
 
 
         _pre = _find_flight_by_chat_channel(self.chat_channel_id)
@@ -6786,7 +6786,7 @@ class FlightChannelDeleteConfirmView(discord.ui.View):
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.edit_message(
-            embed=create_info_embed("Cancelled", "The channels were not deleted.", discord.Color.green()), view=None)
+            embed=create_info_embed("Cancelled", "The channels were not deleted.", theme.SUCCESS), view=None)
         self.stop()
 
 
@@ -6798,15 +6798,15 @@ class FlightChannelDeleteView(discord.ui.View):
     async def delete_channels(self, interaction: discord.Interaction, button: discord.ui.Button):
         item = _find_flight_by_chat_channel(interaction.channel.id, getattr(interaction.message, "id", None))
         if not item:
-            return await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Not found', 'This channel is no longer linked to a flight.', discord.Color.red()), content=None), ephemeral=True)
+            return await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Not found', 'This channel is no longer linked to a flight.', theme.DANGER), content=None), ephemeral=True)
         host_id = item.get("host_id")
         if interaction.user.id != host_id:
-            return await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Not allowed', 'Only the flight host can delete these channels.', discord.Color.red()), content=None), ephemeral=True)
+            return await interaction.response.send_message(view=embed_to_v2_layout(create_info_embed('Not allowed', 'Only the flight host can delete these channels.', theme.DANGER), content=None), ephemeral=True)
         await interaction.response.send_message(
             embed=create_info_embed(
                 "Delete channels?",
                 f"This will permanently delete **{item.get('flight_code')}-VC** and **{item.get('flight_code')}-chat**. This cannot be undone.",
-                discord.Color.red()),
+                theme.DANGER),
             view=FlightChannelDeleteConfirmView(interaction.channel.id, host_id), ephemeral=True)
 
 
@@ -8210,7 +8210,7 @@ def generate_flight_app_embed(data: dict, ts: int = 0) -> discord.Embed:
         f"**Equipment:** {data['equipment']}\n"
         f"**Details:** {data['detail']}\n"
     )
-    embed = discord.Embed(title="Flight Application (Pending)", description=desc, color=0x1B3444)
+    embed = discord.Embed(title="Flight Application (Pending)", description=desc, color=theme.PRIMARY)
     if data['avatar_url']:
         embed.set_footer(text=f"Applicant: {data['user_name']}", icon_url=data['avatar_url'])
     else:
@@ -8293,7 +8293,7 @@ async def check_expired_applications():
             applicant = client.get_user(data["host_id"]) if data["host_id"] else None
 
             if APP_EXPIRY_ACTION == "deny":
-                embed.color = discord.Color.red()
+                embed.color = theme.DANGER
                 embed.title = "Flight Application (Auto-Expired)"
                 if not any("Status" in f.name for f in embed.fields):
                     embed.add_field(name="Status", value="Automatically denied due to no response.", inline=False)
@@ -8319,7 +8319,7 @@ async def check_expired_applications():
                     action="Flight Application Auto-Expired (Denied)",
                     detail=f"Flight Code: {data.get('flight_code','Unknown')}\n{APP_EXPIRY_HOURS} hours with no response, so it was automatically rejected.",
                     target=applicant,
-                    color=discord.Color.red().value
+                    color=theme.DANGER
                 )
             else:
                 if not any("Reminded" in f.name for f in embed.fields):
@@ -8361,7 +8361,7 @@ class DenyReasonModal(discord.ui.Modal, title="Reason for Denial"):
 
     async def on_submit(self, interaction: discord.Interaction):
         embed = self.original_embed
-        embed.color = discord.Color.red()
+        embed.color = theme.DANGER
         embed.title = "Flight Application (Denied)"
         if not any("Status" in f.name for f in embed.fields):
             embed.add_field(name="Status", value=f"Denied by: {interaction.user.mention}\n**Reason:** {self.reason.value}", inline=False)
@@ -8375,7 +8375,7 @@ class DenyReasonModal(discord.ui.Modal, title="Reason for Denial"):
             action="Flight Application Denied",
             detail=f"Flight Code: {app_data.get('flight_code','Unknown')}\nReason: {self.reason.value}",
             target=client.get_user(app_data["host_id"]) if app_data.get("host_id") else None,
-            color=discord.Color.red().value
+            color=theme.DANGER
         )
 
 class FlightAppEditModal(discord.ui.Modal):
@@ -8449,7 +8449,7 @@ class FlightAppView(discord.ui.View):
             return await interaction.response.send_message(ephemeral=True, view=build_v2_card('Notice', [(None, 'This application cannot be approved. While it was pending, other applications/flights were confirmed, which conflicts with the following rules.\nPlease review it with "Edit & Re-apply", or deny it.\n\n' + '\n'.join(recheck_reasons))]))
 
         embed = interaction.message.embeds[0]
-        embed.color = discord.Color.green()
+        embed.color = theme.SUCCESS
         embed.title = "Flight Application (Approved)"
         if not any("Status" in f.name for f in embed.fields):
             embed.add_field(name="Status", value=f"Approved by: {interaction.user.mention}", inline=False)
@@ -8463,7 +8463,7 @@ class FlightAppView(discord.ui.View):
             action="Flight Application Approved",
             detail=f"Flight Code: {app_data.get('flight_code','Unknown')}",
             target=client.get_user(app_data["host_id"]) if app_data.get("host_id") else None,
-            color=discord.Color.green().value
+            color=theme.SUCCESS
         )
 
     @discord.ui.button(label="", style=discord.ButtonStyle.secondary, emoji=EMOJI_X_STR, custom_id="flight_app_deny")
@@ -8535,7 +8535,7 @@ async def send_flight_app_guidance(channel):
             "Use `/flight_app` to create a flight.\n"
             "Please provide as much detail as possible. If you have any questions, feel free to ask."
         ),
-        color=0x3498db
+        color=theme.INFO
     )
     try:
 
@@ -8613,7 +8613,7 @@ async def process_flight_application(interaction: discord.Interaction, departure
 
     if is_auto_cancelled:
         embed.title = "Flight Application (Auto-Cancelled)"
-        embed.color = discord.Color.red()
+        embed.color = theme.DANGER
         embed.add_field(name="Status", value="Auto-Cancelled", inline=False)
         
         await target_channel.send(embed=embed, view=FlightAppAutoCancelView())
@@ -8772,7 +8772,7 @@ class EvaluationDMView(discord.ui.View):
             embed = discord.Embed(
                 title="Periodic Evaluation Report",
                 description=f"{target_mention}\n\nHere is your periodic evaluation report.\nThank you for your continued efforts in your daily work.",
-                color=0x1B3444
+                color=theme.PRIMARY
             )
             embed.add_field(name="Reviewer", value=reviewer, inline=False)
             embed.add_field(name="Overall rating", value=f"**{grade}**", inline=False)
@@ -8784,7 +8784,7 @@ class EvaluationDMView(discord.ui.View):
             embed = discord.Embed(
                 title="Employee Evaluation Report",
                 description=f"Dear {target_mention},\n\nPlease find your regular evaluation report below.\nThank you for your continued dedication and hard work.",
-                color=0x1B3444
+                color=theme.PRIMARY
             )
             embed.add_field(name="Reviewer", value=reviewer, inline=False)
             embed.add_field(name="Grade", value=f"**{grade}**", inline=False)
@@ -8859,7 +8859,7 @@ def build_checklist_embed(flight, flight_code) -> discord.Embed:
     embed = discord.Embed(
         title=f"Checklist | {flight_code}",
         description="\n".join(lines),
-        color=discord.Color.green() if all_good else discord.Color.orange()
+        color=theme.SUCCESS if all_good else theme.WARNING
     )
     if not all_good:
         embed.set_footer(text="Some items are incomplete.")
@@ -8973,7 +8973,7 @@ async def find_staff_cmd(interaction: discord.Interaction, position: str):
     embed = discord.Embed(
         title=f"Open positions: \"{position}\" ({len(hits)})",
         description=desc[:4000],
-        color=discord.Color.orange()
+        color=theme.WARNING
     )
     await interaction.response.send_message(view=embed_to_v2_layout(embed, content=None))
 

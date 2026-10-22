@@ -5,6 +5,7 @@ import asyncio
 import uuid
 
 from . import core as C
+from . import ui_theme as theme
 
 
 class RemindConfirmView(discord.ui.View):
@@ -39,7 +40,7 @@ class RemindConfirmView(discord.ui.View):
         embed = discord.Embed(
             title=f"Flight Participation Reminder ({month})", 
             description=desc, 
-            color=discord.Color.orange()
+            color=theme.WARNING
         )
         embed.set_footer(text="Flight Hub")
         return embed
@@ -486,7 +487,7 @@ async def send_gamenight_task(interaction, game_name, game_link, prize, descript
     embed = discord.Embed(
         title=f"Staff Game Night: {game_name}", 
         description=description, 
-        color=discord.Color.purple()
+        color=theme.INFO
     )
     embed.add_field(name="Host", value=interaction.user.display_name, inline=False)
     embed.add_field(name="Game", value=game_name, inline=True)
@@ -639,5 +640,5 @@ async def remind_status_cmd(interaction: discord.Interaction):
     for uid in users:
         desc += f"<@{uid}> "
 
-    embed = discord.Embed(title=f"{C.EMOJI_SEARCH_STR} Reminders Sent List - {jst_now.month} ({len(users)})", description=desc[:4000], color=discord.Color.blue())
+    embed = discord.Embed(title=f"{C.EMOJI_SEARCH_STR} Reminders Sent List - {jst_now.month} ({len(users)})", description=desc[:4000], color=theme.INFO)
     await interaction.response.send_message(view=C.embed_to_v2_layout(embed, content=None), ephemeral=True)
