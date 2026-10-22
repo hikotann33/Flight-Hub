@@ -3032,7 +3032,7 @@ def build_edit_flight_embed(flight, flight_code, image_url=None):
     embed.add_field(name="1 · Title", value=f"```{title}```", inline=False)
     embed.add_field(name="2 · Route", value=f"```{route_val}```", inline=False)
     embed.add_field(name="3 · Aircraft Equipment", value=f"```{flight.get('equipment', 'Unknown')}```", inline=False)
-    embed.add_field(name="4 · Aircraft Operator", value=f"```{flight.get("airline") or default_airline()}```", inline=False)
+    embed.add_field(name="4 · Aircraft Operator", value=f"```{flight.get('airline') or default_airline()}```", inline=False)
 
     staff_ts = int(flight.get('staff_timestamp', 0))
     start_ts = int(flight.get('start_timestamp', 0))
@@ -8499,7 +8499,7 @@ class FlightAppEditModal(discord.ui.Modal):
         self.flight_code_input = discord.ui.TextInput(label="Flight Code", default=data.get("flight_code", ""), required=True, max_length=50)
         self.origin_input = discord.ui.TextInput(label="Origin", default=data.get("origin", ""), required=True, max_length=50)
         self.dest_input = discord.ui.TextInput(label="Destination", default=data.get("dest", ""), required=True, max_length=50)
-        self.equipment_input = discord.ui.TextInput(label="Airline / Equipment", default=f"{data.get("airline") or default_airline()} / {data.get('equipment', '')}", required=True, max_length=100)
+        self.equipment_input = discord.ui.TextInput(label="Airline / Equipment", default=f"{data.get('airline') or default_airline()} / {data.get('equipment', '')}", required=True, max_length=100)
         self.detail_input = discord.ui.TextInput(label="Details", style=discord.TextStyle.paragraph, default=data.get("detail", ""), required=True, max_length=500)
         
         self.add_item(self.flight_code_input)
