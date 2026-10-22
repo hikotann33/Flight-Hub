@@ -123,6 +123,7 @@ _load_dotenv()
 
 from .config_store import cfg
 from . import templates
+from . import ui_theme as theme
 
 
 def default_airline() -> str:
@@ -1599,8 +1600,23 @@ def disable_view_items(view):
     _walk(view.children)
 
 
+def _themed_color(value):
+    if value is None:
+        return None
+    palette = {
+        0xE74C3C: theme.DANGER,
+        0x2ECC71: theme.SUCCESS,
+        0xE67E22: theme.WARNING,
+        0xF1C40F: theme.WARNING,
+        0x3498DB: theme.INFO,
+        0x206695: theme.PRIMARY,
+    }
+    return palette.get(value, value)
+
+
 def create_info_embed(title, description, color=None):
-    return discord.Embed(title=title, description=description, color=EMBED_COLOR if color is None else color)
+    value = None if color is None else int(getattr(color, "value", color))
+    return theme.embed(title=title, description=description, color=_themed_color(value))
 
 
 def build_google_calendar_url(flight: dict, start_ts=None, end_ts=None) -> str:
