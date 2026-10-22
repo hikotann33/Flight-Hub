@@ -1,12 +1,12 @@
 # Flight Hub
 
-[![CI](https://github.com/your-org/flight-hub/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/flight-hub/actions/workflows/ci.yml)
+[![CI](https://github.com/hikotann33/Flight-Hub/actions/workflows/ci.yml/badge.svg)](https://github.com/hikotann33/Flight-Hub/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 
 **v2** · オープンソース · [MIT ライセンス](LICENSE)
 
-**🌐 公開サイト（英語）**: https://your-org.github.io/flight-hub/
+**🌐 公開サイト（英語）**: https://hikotann33.github.io/Flight-Hub/
 （このリポジトリの `docs/index.html` を GitHub Pages で公開しています）
 
 `discord.py` で作られた、Discord 向けのオープンソースなフライト運用ボットです。
@@ -48,7 +48,7 @@
 ## クイックスタート
 
 ```bash
-git clone <your-fork-url> Flight-Hub
+git clone https://github.com/hikotann33/Flight-Hub.git Flight-Hub
 cd Flight-Hub
 python -m venv venv
 # Windows: venv\Scripts\activate
@@ -143,10 +143,8 @@ EMBED_COLOR   = cfg("colors.primary", 0x1B3444)
 2. **Source** で "Deploy from a branch" を選ぶ
 3. Branch: `main` / Folder: `/docs` を指定して Save
 
-数分後に `https://<ユーザー名>.github.io/<リポジトリ名>/` で公開されます。
+数分後に `https://hikotann33.github.io/Flight-Hub/` で公開されます。
 
-> push の前に `docs/index.html` と README 内の `your-org/flight-hub`
-> を、実際のリポジトリ（`オーナー/リポジトリ名`）に置き換えてください。
 > `docs/.nojekyll` があるので Jekyll の変換は行われず、HTML がそのまま配信されます。
 
 ## コントリビュート

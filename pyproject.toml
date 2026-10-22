@@ -34,9 +34,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-org/flight-hub"
-Issues = "https://github.com/your-org/flight-hub/issues"
-Changelog = "https://github.com/your-org/flight-hub/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/hikotann33/Flight-Hub"
+Issues = "https://github.com/hikotann33/Flight-Hub/issues"
+Changelog = "https://github.com/hikotann33/Flight-Hub/blob/main/CHANGELOG.md"
 
 [project.scripts]
 flight-hub = "flighthub.core:start"

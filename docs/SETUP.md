@@ -21,7 +21,7 @@
 ## 2. インストール
 
 ```bash
-git clone <your-fork-url> Flight-Hub
+git clone https://github.com/hikotann33/Flight-Hub.git Flight-Hub
 cd Flight-Hub
 python -m venv venv
 # Windows: venv\Scripts\activate

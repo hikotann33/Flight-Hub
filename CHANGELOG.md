@@ -80,6 +80,6 @@ Flight Hub の最初のオープンソースリリースです。
   `roblox_link` は維持しています。
 - 企業固有のシークレット、サーバー ID、絵文字 ID。
 
-[Unreleased]: https://github.com/your-org/flight-hub/compare/v2.0.0...HEAD
-[2.0.0]: https://github.com/your-org/flight-hub/releases/tag/v2.0.0
-[1.0.0]: https://github.com/your-org/flight-hub/releases/tag/v1.0.0
+[Unreleased]: https://github.com/hikotann33/Flight-Hub/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/hikotann33/Flight-Hub/releases/tag/v2.0.0
+[1.0.0]: https://github.com/hikotann33/Flight-Hub/releases/tag/v1.0.0

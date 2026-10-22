@@ -1,7 +1,7 @@
 blank_issues_enabled: false
 contact_links:
   - name: セットアップガイド
-    url: https://github.com/your-org/flight-hub/blob/main/docs/SETUP.md
+    url: https://github.com/hikotann33/Flight-Hub/blob/main/docs/SETUP.md
     about: Flight Hub のインストールと設定の手順を説明しています。
   - name: discord.py のドキュメント
     url: https://discordpy.readthedocs.io/
