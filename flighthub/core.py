@@ -597,6 +597,16 @@ def sync_last_mention_from_cache():
 def _mention_exempt(flight: dict) -> bool:
     return bool(flight.get("is_test") or flight.get("is_private") or flight.get("is_gamenight"))
 
+def _remove_mention(content: str, mention: str) -> str:
+    if not mention:
+        return content
+    for pattern in (f"{mention}\n", mention):
+        if pattern in content:
+            return content.replace(pattern, "", 1)
+    for token in mention.split():
+        content = content.replace(token, "", 1)
+    return content
+
 def apply_mention_policy(flight: dict, content: str) -> str:
     mention = flight.get("mention_str", f"<@&{NOTIFICATION_ROLE_ID}>")
     if _mention_exempt(flight):
@@ -605,12 +615,12 @@ def apply_mention_policy(flight: dict, content: str) -> str:
         return content
     if mention_cooldown_active():
         flight["no_mention"] = True
-        return content.replace(f"{mention}\n", "", 1)
+        return _remove_mention(content, mention)
     flight["no_mention"] = False
     return content
 
 def commit_mention(flight: dict, posted_content: str):
-    global LAST_CUSTOMER_MENTION_TS
+    global global_db_dirty, LAST_CUSTOMER_MENTION_TS
     if _mention_exempt(flight):
         return
     mention = flight.get("mention_str", f"<@&{NOTIFICATION_ROLE_ID}>")
@@ -620,6 +630,7 @@ def commit_mention(flight: dict, posted_content: str):
     flight["mention_sent_ts"] = now_ts
     flight["no_mention"] = False
     LAST_CUSTOMER_MENTION_TS = now_ts
+    global_db_dirty = True
     try:
         client.loop.create_task(save_misc_data())
     except Exception as e:
@@ -631,13 +642,12 @@ async def refresh_mention_clock_from_history(limit=100):
     global LAST_CUSTOMER_MENTION_TS
     try:
         ch = client.get_channel(CUSTOMER_CHANNEL_ID) or await client.fetch_channel(CUSTOMER_CHANNEL_ID)
-        toks = _mention_tokens()
         async for m in ch.history(limit=limit):
             if m.author != client.user or not m.content:
                 continue
             if not any(mk in m.content for mk in _ANNOUNCE_MARKERS):
                 continue
-            if any(t in m.content for t in toks):
+            if re.search(r"<@&\d+>|@everyone|@here", m.content):
                 ts = m.created_at.timestamp()
                 if ts > LAST_CUSTOMER_MENTION_TS:
                     LAST_CUSTOMER_MENTION_TS = ts
@@ -649,6 +659,7 @@ async def refresh_mention_clock_from_history(limit=100):
         return True
     except Exception as e:
         print(f"Could not read customer channel history for the mention clock: {e}")
+        sync_last_mention_from_cache()
         return False
 
 _MENTION_LOCK = None
@@ -1113,6 +1124,78 @@ async def check_date_based_spacing_vs_log(new_ts: int, min_days: int = FLIGHT_MI
                 break
     except Exception:
         pass
+    return True, ""
+
+async def check_date_based_spacing_vs_apps(bot_client, new_ts: int, current_flight_code: str = None, min_days: int = FLIGHT_MIN_GAP_DAYS, ignore_message_id: int = None) -> tuple[bool, str]:
+    if new_ts <= 0:
+        return True, ""
+    app_channel = bot_client.get_channel(FLIGHT_APP_CHANNEL_ID)
+    if not app_channel:
+        return True, ""
+    new_date = _get_jst_date(new_ts)
+    now_ts = datetime.datetime.now().timestamp()
+    ignore_fc = current_flight_code.lower() if current_flight_code else None
+
+    try:
+        async for msg in app_channel.history(limit=80):
+            if ignore_message_id and msg.id == ignore_message_id:
+                continue
+            if not (msg.author.bot and msg.embeds):
+                continue
+            embed = msg.embeds[0]
+            if not (embed.title and ("Pending" in embed.title or "Approved" in embed.title)):
+                continue
+            app_data = extract_app_data(embed)
+            app_fc = app_data.get("flight_code", "")
+            if ignore_fc and app_fc.lower() == ignore_fc:
+                continue
+            if app_fc.upper().startswith("[TEST]"):
+                continue
+            dep_ts = parse_date_time_to_ts(
+                app_data.get("date", ""),
+                app_data.get("time", ""),
+                app_data.get("offset_hrs", 9)
+            )
+            if dep_ts <= 0 or dep_ts <= now_ts:
+                continue
+            if app_fc and any(
+                f.get("flight_code") == app_fc
+                and f.get("start_timestamp", 0) > 0
+                and _get_jst_date(f["start_timestamp"]) == _get_jst_date(dep_ts)
+                for f in FLIGHT_LOG_CACHE
+            ):
+                continue
+
+            existing_date = _get_jst_date(dep_ts)
+            diff_days = abs((new_date - existing_date).days)
+            if diff_days < min_days:
+                status_label = "approved" if "Approved" in embed.title else "pending"
+                return False, (
+                    f"This date is too close to another flight application `{app_fc}` ({status_label}, gap: {diff_days} day(s)).\n"
+                    f"Flights can only be held once a week: at least {min_days} calendar days apart.\n"
+                    f"A flight can be hosted once per week. Leave at least {min_days} calendar days between flights."
+                )
+    except Exception as e:
+        print(f"check_date_based_spacing_vs_apps error: {e}")
+
+    return True, ""
+
+async def validate_flight_spacing_all(bot_client, new_ts: int, current_flight_code: str = None, min_days: int = FLIGHT_MIN_GAP_DAYS, ignore_message_id: int = None) -> tuple[bool, str]:
+    ok, reason = check_date_based_spacing(new_ts, current_flight_code=current_flight_code, min_days=min_days)
+    if not ok:
+        return False, reason
+
+    ok, reason = await check_date_based_spacing_vs_apps(
+        bot_client, new_ts, current_flight_code=current_flight_code,
+        min_days=min_days, ignore_message_id=ignore_message_id
+    )
+    if not ok:
+        return False, reason
+
+    ok, reason = await check_date_based_spacing_vs_log(new_ts, min_days=min_days)
+    if not ok:
+        return False, reason
+
     return True, ""
 
 async def check_host_duplicate(bot_client, host_id: int, ignore_flight_code: str = None) -> str | None:
@@ -1954,6 +2037,7 @@ async def init_log_cache():
     if not found:
         print("DB Cache: no existing backup found. Starting fresh.")
         FLIGHT_LOG_CACHE = []
+        sync_last_mention_from_cache()
         return
     if not isinstance(data, list):
         raise LoadError("flight_log backup has an unexpected format (expected a list)")
@@ -1971,6 +2055,7 @@ async def init_log_cache():
     changed = sum(1 for f in FLIGHT_LOG_CACHE if migrate_flight_record(f))
     if changed:
         global_db_dirty = True
+    sync_last_mention_from_cache()
     print(f"DB Cache Loaded: {len(FLIGHT_LOG_CACHE)} active flights ({changed} converted to V14 format).")
 
 async def _save_json_to_channel_unlocked(channel_id, data, filename):
@@ -2282,6 +2367,7 @@ async def v14_upgrade_data():
             pass
 
 
+    sync_last_mention_from_cache()
     if not await refresh_mention_clock_from_history():
         report["warnings"].append("Customer channel history could not be read (mention clock may be incomplete).")
     latest = LAST_CUSTOMER_MENTION_TS
@@ -3749,7 +3835,18 @@ class EditFlightModal(discord.ui.Modal, title="Edit Flight Details"):
             end_dt = pass_dt + datetime.timedelta(hours=1)
             lock_dt = pass_dt + datetime.timedelta(minutes=20)
 
-
+            new_start_ts = int(pass_dt.timestamp())
+            current_flight = next((f for f in FLIGHT_LOG_CACHE if f["flight_code"] == self.flight_code), None)
+            if current_flight is None:
+                return await interaction.followup.send(ephemeral=True, view=build_v2_card('Notice', [(None, EMOJI_X_STR + ' Error: Flight not found.')]))
+            old_start_ts = current_flight.get("start_timestamp", 0)
+            date_changed = (not old_start_ts) or _get_jst_date(old_start_ts) != _get_jst_date(new_start_ts)
+            if date_changed and is_customer_flight(current_flight):
+                ok, reason = await validate_flight_spacing_all(
+                    client, new_start_ts, current_flight_code=self.flight_code
+                )
+                if not ok:
+                    return await interaction.followup.send(ephemeral=True, view=build_v2_card('Notice', [(None, reason)]))
 
             async with global_json_lock:
                 target_idx = next((i for i, f in enumerate(FLIGHT_LOG_CACHE) if f["flight_code"] == self.flight_code), -1)
@@ -7140,6 +7237,10 @@ async def process_flight_creation(host_user, data, image_bytes, saved_image_url,
             notify_20min = staff_dt - datetime.timedelta(minutes=20)
 
             is_custom = data.get("is_custom", False)
+            is_customer = not (
+                data.get("is_private") or data.get("is_gamenight") or data.get("is_test")
+                or str(data.get("flight_code", "")).upper().startswith("[TEST]")
+            )
             
 
             used_origins = await get_used_origins(client, ignore_flight_code=data["flight_code"])
@@ -7172,6 +7273,13 @@ async def process_flight_creation(host_user, data, image_bytes, saved_image_url,
 
             if pass_ts < now_ts + (48 * 3600):
                 return False, "Flights must be created at least 2 days (48 hours) before departure."
+
+        if is_customer:
+            ok, reason = await validate_flight_spacing_all(
+                client, int(pass_ts), current_flight_code=data["flight_code"]
+            )
+            if not ok:
+                return False, reason
 
 
 
@@ -8433,7 +8541,10 @@ class FlightAppView(discord.ui.View):
 
         recheck_reasons = []
         if recheck_ts > 0:
-            ok, reason = check_date_based_spacing(recheck_ts, current_flight_code=recheck_fc)
+            ok, reason = await validate_flight_spacing_all(
+                client, recheck_ts, current_flight_code=recheck_fc,
+                ignore_message_id=interaction.message.id
+            )
             if not ok:
                 recheck_reasons.append(reason)
 
@@ -8579,16 +8690,10 @@ async def process_flight_application(interaction: discord.Interaction, departure
 
 
     if ts > 0:
-        ok, reason = check_date_based_spacing(ts, current_flight_code=flight_code)
+        ok, reason = await validate_flight_spacing_all(client, ts, current_flight_code=flight_code)
         if not ok:
             is_auto_cancelled = True
             cancel_reasons.append(f"- {reason}\n")
-
-        if not is_auto_cancelled:
-            ok, reason = await check_date_based_spacing_vs_log(ts)
-            if not ok:
-                is_auto_cancelled = True
-                cancel_reasons.append(f"- {reason}\n")
 
 
     dup_host_fc = await check_host_duplicate(client, interaction.user.id, ignore_flight_code=flight_code)
